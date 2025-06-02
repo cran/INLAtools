@@ -1,0 +1,43 @@
+Package: INLAtools
+Type: Package
+Title: Functionalities for the 'INLA' Package
+Version: 0.0.1
+Maintainer: Elias Teixeira Krainski <eliaskrainski@gmail.com>
+Authors@R: c(
+ person(given = c("Elias"),
+        family = "Teixeira Krainski",
+        email = "eliaskrainski@gmail.com",
+        role = c("cre", "aut", "cph"),
+        comment = c(ORCID = "0000-0002-7063-2615")),
+ person(given = "Haavard",
+        family = "Rue’",
+        role = "aut",
+        comment = c(ORCID = "0000-0002-0222-1881"))
+        )
+Description: Contain code to work with latent Gaussian
+  Markov random field (GMRF) models. Queries for the 
+  'cgeneric' interface, specified as a way to implement
+  new GMRF models to be fitted as model components
+  in the 'INLA' package (<https://www.r-inla.org>).
+  The implemented functionalities leverage the use 
+  of 'cgeneric' models and provide a way to debug 
+  the code as well to work with the prior for the 
+  model parameters and to sample from it. 
+  A Kronecker product method is also implemented to 
+  work with the four possible combinations between 
+  a 'cgeneric' and a 'rgeneric' model.
+Additional_repositories: https://inla.r-inla-download.org/R/testing
+License: GPL (>= 2)
+Encoding: UTF-8
+RoxygenNote: 7.3.2
+NeedsCompilation: yes
+Depends: R (>= 4.3), Matrix
+Imports: methods, utils
+Suggests: INLA (>= 24.02.09)
+BuildVignettes: true
+Packaged: 2025-06-02 08:34:09 UTC; eliask
+Author: Elias Teixeira Krainski [cre, aut, cph] (ORCID:
+    <https://orcid.org/0000-0002-7063-2615>),
+  Haavard Rue’ [aut] (ORCID: <https://orcid.org/0000-0002-0222-1881>)
+Repository: CRAN
+Date/Publication: 2025-06-02 13:02:13 UTC
