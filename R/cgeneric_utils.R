@@ -38,105 +38,91 @@ cgeneric_get <- function(model,
                    several.ok = TRUE)
   stopifnot(length(cmd)>0)
 
-    if(missing(theta)) {
-      if(cmd %in% c("Q", "log_prior")) {
-        stop("Please provide 'theta'!")
-      } else {
-        theta <- NULL
-        ntheta = 0L
-      }
+  if(missing(theta)) {
+    if(cmd %in% c("Q", "log_prior")) {
+      stop("Please provide 'theta'!")
     } else {
-      storage.mode(theta) <- "double"
-      if(inherits(theta, "matrix")) {
-        ntheta <- as.integer(ncol(theta))
-      } else {
-        ntheta <- 1L
-      }
+      theta <- NULL
+      ntheta = 0L
     }
+  } else {
+    if(inherits(theta, "matrix")) {
+      ntheta <- as.integer(ncol(theta))
+    } else {
+      ntheta <- 1L
+    }
+    theta <- as.numeric(theta)
+  }
 
-    if(length(cmd) == 1) {
-      ret <- .Call(
-        "inla_cgeneric_element_get",
-        cmd,
-        theta,
-        as.integer(ntheta),
-        cgdata$ints,
-        cgdata$doubles,
-        cgdata$characters,
-        cgdata$matrices,
-        cgdata$smatrices,
-        PACKAGE = "INLAtools"
+  ## from Version 0.0.3.902 (and src/cgeneric_get.c)
+  ## split each sparse matrix into list elements:
+  ## nr, nc, m, i, j, x
+  nsm <- length(cgdata$smatrices)
+  if(nsm>0) {
+    for(i in 1:nsm) {
+      smi <- cgdata$smatrices[[i]]
+      mi <- as.integer(smi[3])
+      cgdata$smatrices[[i]] <- list(
+        nr = as.integer(smi[1]),
+        nc = as.integer(smi[2]),
+        m = mi,
+        i = as.integer(smi[3+1:mi]),
+        j = as.integer(smi[3+mi+1:mi]),
+        x = smi[3+2*mi+1:mi]
       )
-
-      if((cmd %in% c("graph", "Q")) && (!optimize)) {
-        if(cmd == "graph") {
-          ij <- ret
-          ret <- rep(1, length(ij[[1]]))
-        } else {
-          ij <- .Call(
-            "inla_cgeneric_element_get",
-            "graph",
-            NULL,
-            as.integer(ntheta),
-            cgdata$ints,
-            cgdata$doubles,
-            cgdata$characters,
-            cgdata$matrices,
-            cgdata$smatrices,
-            PACKAGE = "INLAtools"
-          )
-        }
-        ret <- Matrix::sparseMatrix(
-          i = ij[[1]] + 1L,
-          j = ij[[2]] + 1L,
-          x = ret,
-          symmetric = TRUE,
-          repr = "T"
-        )
-      }
-      return(ret)
     }
+  }
 
-    names(cmd) <- cmd
-    ret <-
-      lapply(
-        cmd, function(x) {
-          .Call(
-            "inla_cgeneric_element_get",
-            x,
-            theta,
-            as.integer(ntheta),
-            cgdata$ints,
-            cgdata$doubles,
-            cgdata$characters,
-            cgdata$matrices,
-            cgdata$smatrices,
-            PACKAGE = "INLAtools"
-          )
-        }
-      )
-    if(optimize) {
-      return(ret)
-    }
+  if(length(cmd) == 1) {
+    ret <- .Call(
+      "inla_cgeneric_element_get",
+      cmd,
+      theta,
+      as.integer(ntheta),
+      cgdata$ints,
+      cgdata$doubles,
+      cgdata$characters,
+      cgdata$matrices,
+      cgdata$smatrices,
+      PACKAGE = "INLAtools"
+    )
 
-    if(any(cmd == "graph")) {
-      ret$graph <-
-        Matrix::sparseMatrix(
-          i = ret$graph[[1]] + 1L,
-          j = ret$graph[[2]] + 1L,
-          x = rep(1, length(ret$graph[[1]])),
-          symmetric = TRUE,
-          repr = "T"
-        )
-    }
-
-    if(any(cmd == "Q")) {
-      if(any(cmd == "graph")) {
-        ij <- ret$graph
+    if((cmd %in% c("graph", "Q")) && (!optimize)) {
+      if(cmd == "graph") {
+        ij <- ret
+        ret <- rep(1, length(ij[[1]]))
       } else {
         ij <- .Call(
           "inla_cgeneric_element_get",
           "graph",
+          NULL,
+          as.integer(ntheta),
+          cgdata$ints,
+          cgdata$doubles,
+          cgdata$characters,
+          cgdata$matrices,
+          cgdata$smatrices,
+          PACKAGE = "INLAtools"
+        )
+      }
+      ret <- Matrix::sparseMatrix(
+        i = ij[[1]] + 1L,
+        j = ij[[2]] + 1L,
+        x = ret,
+        symmetric = TRUE,
+        repr = "T"
+      )
+    }
+    return(ret)
+  }
+
+  names(cmd) <- cmd
+  ret <-
+    lapply(
+      cmd, function(x) {
+        .Call(
+          "inla_cgeneric_element_get",
+          x,
           theta,
           as.integer(ntheta),
           cgdata$ints,
@@ -146,16 +132,47 @@ cgeneric_get <- function(model,
           cgdata$smatrices,
           PACKAGE = "INLAtools"
         )
-        ij <- Matrix::sparseMatrix(
-          i = ij[[1]] + 1L,
-          j = ij[[2]] + 1L,
-          symmetric = TRUE,
-          repr = "T"
-        )
       }
-      ij@x <- ret$Q
-      ret$Q <- ij
+    )
+  if(optimize) {
+    return(ret)
+  }
+
+  if(any(cmd == "Q")) {
+    if(any(cmd == "graph")) {
+      ij <- ret$graph
+      ret$graph <- Matrix::sparseMatrix(
+        i = ret$graph[[1]] + 1L,
+        j = ret$graph[[2]] + 1L,
+        x = rep(1, length(ret$graph[[1]])),
+        symmetric = TRUE,
+        repr = "T"
+      )
+      x <- ret$Q
+      ret$Q <- ret$graph
+      ret$Q@x <- x
+    } else {
+      ij <- .Call(
+        "inla_cgeneric_element_get",
+        "graph",
+        theta,
+        as.integer(ntheta),
+        cgdata$ints,
+        cgdata$doubles,
+        cgdata$characters,
+        cgdata$matrices,
+        cgdata$smatrices,
+        PACKAGE = "INLAtools"
+      )
+      ret$Q <- Matrix::sparseMatrix(
+        i = ij[[1]] + 1L,
+        j = ij[[2]] + 1L,
+        x = ret$Q,
+        symmetric = TRUE,
+        repr = "T"
+      )
     }
+  }
 
   return(ret)
 
@@ -173,20 +190,45 @@ mu.cgeneric <- function(model, theta) {
   cgeneric_get(model, "mu", theta = theta)
 }
 #' @describeIn cgeneric_get
+#' Retrieve the graph of an `cgeneric` object
+#' @param optimize logical indicating if it is to be
+#' returned only the elements and not as a sparse matrix.
+#' @export
+graph.cgeneric <- function(model, optimize) {
+  if(missing(optimize)) {
+    optimize <- FALSE
+  }
+  return(cgeneric_get(
+    model, "graph",
+    optimize = optimize))
+}
+#' @describeIn cgeneric_get
+#' Retrieve the precision of an `cgeneric` object
+#' @export
+prec.cgeneric <- function(model, theta, optimize) {
+  if(missing(optimize)) {
+    optimize <- FALSE
+  }
+  cgeneric_get(model,
+               cmd = "Q",
+               theta = theta,
+               optimize = optimize)
+}
+#' @describeIn cgeneric_get
 #' Evaluate the prior for an `cgeneric` model
 #' @return numeric scalar (if numeric vector is provided
 #' for theta) or vector (if numeric matrix is provided
 #' for theta).
 #' @export
-#' @seealso [cgeneric_generic0()]
 #' @examples
+#'
 #' old.par <- par(no.readonly = TRUE)
 #'
 #' ## Setting the prior parameters
 #' prior.par <- c(1, 0.5) # P(sigma > 1) = 0.5
 #' cmodel <- cgeneric(
 #'   model = "iid", n = 10,
-#'   param = c(prior.par), useINLAprecomp = FALSE)
+#'   param = prior.par)
 #'
 #' ## prior summaries: sigma and log-precision
 #' (lamb <- -log(prior.par[2])/prior.par[1])
@@ -224,33 +266,11 @@ mu.cgeneric <- function(model, theta) {
 #'    add = TRUE, lty = 2, col = 2)
 #' rug(smedian, lwd = 3, col = 3)
 #' rug(smean, lwd = 3, col = 4)
+#'
 #' par(old.par)
+#'
 prior.cgeneric <- function(model, theta) {
   return(cgeneric_get(model = model,
                       cmd = "log_prior",
                       theta = theta))
-}
-#' @describeIn cgeneric_get
-#' Retrieve the graph of an `cgeneric` object
-#' @param optimize logical indicating if it is to be
-#' returned only the elements and not as a sparse matrix.
-#' @export
-graph.cgeneric <- function(model, optimize) {
-  if(missing(optimize)) {
-    optimize <- FALSE
-  }
-  stopifnot(is.logical(optimize))
-  return(cgeneric_get(
-    model, "graph",
-    optimize = optimize))
-}
-#' @describeIn cgeneric_get
-#' Retrieve the precision of an `cgeneric` object
-#' @export
-prec.cgeneric <- function(model, theta, optimize) {
-  if(missing(optimize)) {
-    optimize <- FALSE
-  }
-  stopifnot(is.logical(optimize))
-  cgeneric_get(model, cmd = "Q", theta = theta, optimize = optimize)
 }

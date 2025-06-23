@@ -16,12 +16,8 @@
 #' sum-to-zero constraint. Default is TRUE.
 #' @param scale logical indicating if it is to scale
 #' the model. See detais.
-#' @param debug integer, default is zero, indicating the verbose level.
-#' Will be used as logical by INLA.
-#' @param useINLAprecomp logical, default is TRUE, indicating if it is to
-#' be used the shared object pre-compiled by INLA.
-#' This is not considered if 'libpath' is provided.
-#' @param libpath string, default is NULL, with the path to the shared object.
+#' @param ... arguments (debug,useINLAprecomp,libpath)
+#' passed on to [cgeneric()].
 #' @details
 #' The precision matrix is defined as
 #'  \deqn{Q = \tau R}
@@ -44,14 +40,14 @@
 #' spatial modelling. Spatial Statistics, vol. 8, p. 39-51.
 #' @return a `cgeneric` object, see [cgeneric()].
 #' @seealso [prior.cgeneric()]
-#' @useDynLib INLAtools
 #' @importFrom methods as
+#' @export
 #' @examples
 #' ## structured precision matrix model definition
 #' R <- Matrix(toeplitz(c(2,-1,0,0,0)))
+#' R
 #' mR <- cgeneric("generic0", R = R,
-#'   scale = FALSE, param = c(1, 0.05),
-#'   useINLAprecomp = FALSE)
+#'   param = c(1, 0.05), scale = FALSE)
 #' graph(mR)
 #' prec(mR, theta = 0)
 cgeneric_generic0 <-
@@ -59,22 +55,7 @@ cgeneric_generic0 <-
            param,
            constr = TRUE,
            scale = TRUE,
-           debug = FALSE,
-           useINLAprecomp = TRUE,
-           libpath = NULL) {
-
-    if(is.null(libpath)) {
-      if (useINLAprecomp) {
-        libpath <- INLA::inla.external.lib("INLAtools")
-      } else {
-        libpath <- system.file("libs", package = "INLAtools")
-        if (Sys.info()["sysname"] == "Windows") {
-          libpath <- file.path(libpath, "x64/INLAtools.dll")
-        } else {
-          libpath <- file.path(libpath, "INLAtools.so")
-        }
-      }
-    }
+           ...) {
 
     stopifnot(param[1]>0)
     if(is.na(param[2])) {
@@ -83,20 +64,20 @@ cgeneric_generic0 <-
     stopifnot(param[2]>=0)
     stopifnot(param[2]<=1)
 
-    R <- Sparse(R)
+    dotArgs <- list(...)
+    if(is.null(dotArgs$debug)) {
+      debug <- FALSE
+    } else {
+      debug <- dotArgs$debug
+    }
+
+    R <- upperPadding(R)
+    if(debug) {
+      print(str(R))
+    }
 
     n <- as.integer(nrow(R))
     stopifnot(n>0)
-
-    idx <- which(R@i <= R@j)
-
-    if(debug) {
-      print(str(list(
-        ii = R@i,
-        jj = R@j,
-        idx = idx
-      )))
-    }
 
     if(scale) {
       Rs <- try(
@@ -111,48 +92,34 @@ cgeneric_generic0 <-
       }
     }
 
-    ord <- order(R@i[idx])
-    nnz <- length(idx)
-    cmodel = "inla_cgeneric_generic0"
+    if(is.null(dotArgs$useINLAprecomp)) {
+      useINLAprecomp <- FALSE
+    } else {
+      useINLAprecomp <- dotArgs$useINLAprecomp
+    }
+    if(useINLAprecomp) {
+     libpath <- cgeneric_libpath(
+       package = "graphpcor",
+       useINLAprecomp = TRUE,
+       debug = debug)
+    } else {
+      libpath <- cgeneric_libpath(
+        package = "INLAtools",
+        useINLAprecomp = FALSE,
+        debug = debug)
+    }
 
-    the_model <- list(
-      f = list(
-        model = "cgeneric",
-        n = n,
-        cgeneric = list(
-          model = cmodel,
-          shlib = libpath,
-          n = as.integer(n),
-          debug = as.logical(debug),
-          data = list(
-            ints = list(
-              n = as.integer(n),
-              debug = as.integer(debug)
-            ),
-            doubles = list(
-              param = param
-            ),
-            characters = list(
-              model = cmodel,
-              shlib = libpath
-            ),
-            matrices = list(
-            ),
-            smatrices = list(
-              Rgraph = c(
-                n, n, nnz,
-                R@i[idx][ord],
-                R@j[idx][ord],
-                R@x[idx][ord]
-              )
-            )
-          )
-        )
+    the_model <- do.call(
+      what = "cgeneric",
+      args = list(
+        model = "inla_cgeneric_generic0",
+        n=as.integer(n),
+        param=param,
+        Rgraph = R,
+        debug = debug,
+        libpath = libpath
       )
     )
-
-    class(the_model) <- "cgeneric"
-    class(the_model$f$cgeneric) <- "cgeneric"
 
     if(constr) {
       the_model$f$extraconstr <- list(
@@ -164,27 +131,25 @@ cgeneric_generic0 <-
     return(the_model)
 
   }
+#' @describeIn cgeneric_generic0
 #' The [cgeneric_iid] uses the [cgeneric_generic0]
 #' with the structure matrix as the identity.
 #' @param n integer required to specify the model size
-#' @inheritParams cgeneric_generic0
 #' @importFrom Matrix Diagonal
+#' @export
 cgeneric_iid <-
   function(n,
            param,
            constr = FALSE,
-           debug = FALSE,
-           useINLAprecomp = TRUE,
-           libpath = NULL) {
-    cgeneric_generic0(
-      R = Diagonal(n = n,
-                   x = rep(1, n)),
-      param = param,
-      constr = constr,
-      scale = FALSE,
-      debug = debug,
-      useINLAprecomp = useINLAprecomp,
-      libpath = libpath
+           ...) {
+    do.call(
+      what = "cgeneric_generic0",
+      args = list(
+        R = Diagonal(n = n, x = rep(1, n)),
+        param = param,
+        constr = constr,
+        scale = FALSE,
+        ...)
     )
-}
+  }
 

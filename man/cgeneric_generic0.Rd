@@ -2,18 +2,13 @@
 % Please edit documentation in R/cgeneric_generic0.R
 \name{cgeneric_generic0}
 \alias{cgeneric_generic0}
+\alias{cgeneric_iid}
 \title{Build an \code{cgeneric} object for a \code{generic0} model.
 See details.}
 \usage{
-cgeneric_generic0(
-  R,
-  param,
-  constr = TRUE,
-  scale = TRUE,
-  debug = FALSE,
-  useINLAprecomp = TRUE,
-  libpath = NULL
-)
+cgeneric_generic0(R, param, constr = TRUE, scale = TRUE, ...)
+
+cgeneric_iid(n, param, constr = FALSE, ...)
 }
 \arguments{
 \item{R}{the structure matrix for the model definition.}
@@ -30,14 +25,10 @@ sum-to-zero constraint. Default is TRUE.}
 \item{scale}{logical indicating if it is to scale
 the model. See detais.}
 
-\item{debug}{integer, default is zero, indicating the verbose level.
-Will be used as logical by INLA.}
+\item{...}{arguments (debug,useINLAprecomp,libpath)
+passed on to \code{\link[=cgeneric]{cgeneric()}}.}
 
-\item{useINLAprecomp}{logical, default is TRUE, indicating if it is to
-be used the shared object pre-compiled by INLA.
-This is not considered if 'libpath' is provided.}
-
-\item{libpath}{string, default is NULL, with the path to the shared object.}
+\item{n}{integer required to specify the model size}
 }
 \value{
 a \code{cgeneric} object, see \code{\link[=cgeneric]{cgeneric()}}.
@@ -66,12 +57,18 @@ Therefore, when the model is scaled,
 \eqn{\tau} is the marginal precision,
 otherwise \eqn{\tau} is the conditional precision.
 }
+\section{Functions}{
+\itemize{
+\item \code{cgeneric_iid()}: The \link{cgeneric_iid} uses the \link{cgeneric_generic0}
+with the structure matrix as the identity.
+
+}}
 \examples{
 ## structured precision matrix model definition
 R <- Matrix(toeplitz(c(2,-1,0,0,0)))
+R
 mR <- cgeneric("generic0", R = R,
-  scale = FALSE, param = c(1, 0.05),
-  useINLAprecomp = FALSE)
+  param = c(1, 0.05), scale = FALSE)
 graph(mR)
 prec(mR, theta = 0)
 }
