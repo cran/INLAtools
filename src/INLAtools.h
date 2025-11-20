@@ -32,12 +32,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#if defined(INLA_EXTERNAL_PACKAGE)
+#include <ltdl.h>
+#else 
 #include <dlfcn.h>
 #include <R.h>
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>	// needed to allow user interrupts
 #include <R_ext/Utils.h>	// needed to allow user interrupts
+#endif
 #include "cgeneric.h"
 
 #if defined(_OPENMP)
@@ -65,9 +69,13 @@ typedef size_t fortran_charlen_t;
 #else
 typedef int fortran_charlen_t;
 #endif
+
 #define F_ONE ((fortran_charlen_t)1)
 
+#if !defined(INLA_EXTERNAL_PACKAGE)
 SEXP inla_cgeneric_element_get(SEXP Rcmd, SEXP Stheta, SEXP Sntheta, SEXP ints,
 			       SEXP doubles, SEXP chars, SEXP mats, SEXP smats);
+#endif
 inla_cgeneric_func_tp inla_cgeneric_generic0;
 inla_cgeneric_func_tp inla_cgeneric_kronecker;
+

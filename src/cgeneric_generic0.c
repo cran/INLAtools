@@ -45,7 +45,7 @@ double *inla_cgeneric_generic0(inla_cgeneric_cmd_tp cmd,
 	int fixed = 1;
 	if ((data->doubles[0]->doubles[1] > 0) &
 	    (data->doubles[0]->doubles[1] < 1)) {
-		fixed = 0;
+		fixed = 0; // if probability in (0,1)
 	}
 
 	if (fixed) {
@@ -130,11 +130,10 @@ double *inla_cgeneric_generic0(inla_cgeneric_cmd_tp cmd,
 
 	case INLA_CGENERIC_LOG_PRIOR:
 		{
-			// return c(LOG_PRIOR), PC-PREC
 			ret = Calloc(1, double);
-			if (fixed) {
+			if (fixed) { // return 0.0;
 				ret[0] = 0.0;
-			} else {
+			} else {     // return LOG_PRIOR : PC-PREC
 				double val = 0.5 * theta[0];
 				assert(!strcasecmp
 				       (data->doubles[0]->name, "param"));
@@ -145,17 +144,7 @@ double *inla_cgeneric_generic0(inla_cgeneric_cmd_tp cmd,
 				if (u <= 0) {
 					ret[0] = 0.0;
 				} else {
-					if (a <= 0.0) {
-						ret[0] = 0.0;
-					} else {
-						if (a >= 1.0) {
-							ret[0] = 0.0;
-						} else {
-							ret[0] =
-							    log(0.5 * l) -
-							    l * exp(-val) - val;
-						}
-					}
+					ret[0] = log(0.5 * l) - l * exp(-val) - val;
 				}
 			}
 			break;

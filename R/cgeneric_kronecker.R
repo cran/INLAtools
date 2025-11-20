@@ -8,6 +8,7 @@
 #' @param ... see [kronecker()]
 #' @return if 'X' and 'Y' are `cgeneric`
 #' return a `cgeneric`, else a `rgeneric`.
+#' @importFrom inlabru bru_get_mapper
 NULL
 #> NULL
 
@@ -39,30 +40,22 @@ setMethod(
     }
 
     if(is.null(mcall$useINLAprecomp)) {
-      useINLAprecomp = FALSE
+      useINLAprecomp = TRUE
     } else {
       useINLAprecomp = mcall$useINLAprecomp
     }
-    if(is.null(mcall$libpath)) {
-      libpath <- NULL
-    } else {
-      libpath <- mcall$libpath
+
+    INLAvcheck <- packageCheck("INLA", "25-10-28")
+    if(is.na(INLAvcheck) & useINLAprecomp) {
+      useINLAprecomp <- FALSE
+      warning("INLA version is old. Setting 'useINLAprecomp = FALSE'!")
     }
+    shlib <- cgeneric_shlib(
+      package = "INLAtools",
+      useINLAprecomp = useINLAprecomp,
+      debug = debug)
 
     cmodel <- "inla_cgeneric_kronecker"
-    if (is.null(libpath)) {
-      if(useINLAprecomp) {
-        libpath <- cgeneric_libpath(
-          package = "graphpcor", ## it is there
-          useINLAprecomp = TRUE,
-          debug = debug)
-      } else {
-        libpath <- cgeneric_libpath(
-          package = "INLAtools",
-          useINLAprecomp = FALSE,
-          debug = debug)
-      }
-    }
 
     n1 <- as.integer(X$f$n)
     n2 <- as.integer(Y$f$n)
@@ -167,17 +160,24 @@ setMethod(
     )
 
     ## initial data
-    ret <- list(
-      f = list(
-        model = "cgeneric",
-        n = as.integer(N),
-        cgeneric = list(
-          model = cmodel,
-          shlib = libpath,
+    ret <- structure(
+      list(
+        f = list(
+          model = "cgeneric",
           n = as.integer(N),
-          debug = as.integer(debug)
+          cgeneric = structure(
+            list(
+              model = cmodel,
+              shlib = shlib,
+              n = as.integer(N),
+              debug = as.integer(debug)
+            ),
+            # inla.cgeneric is needed to support INLA before August 2025
+            class = c("inla.cgeneric.f", "inla.cgeneric")
+          )
         )
-      )
+      ),
+      class = c("cgeneric", "inla.cgeneric")
     )
     ret$f$cgeneric$data <- vector("list", 5L)
     names(ret$f$cgeneric$data) <- c(
@@ -226,7 +226,7 @@ setMethod(
       c(
         list(
           model = cmodel,
-          shlib = libpath
+          shlib = shlib
         ),
         X$f$cgeneric$data$characters,
         Y$f$cgeneric$data$characters
@@ -253,9 +253,6 @@ setMethod(
         )
       )
 
-    class(ret) <- c("cgeneric", "inla.cgeneric")
-    class(ret$f$cgeneric) <- class(ret)
-
     if((!is.null(X$f$extraconstr)) |
        (!is.null(Y$f$extraconstr))) {
         ret$f$extraconstr <-
@@ -270,8 +267,23 @@ setMethod(
         }
     }
 
-    return(ret)
+    # Note: kron(X,Y) gives X-major ordering (the X-index varies slowly, the
+    # Y-index varies quickly), which requires the mappers to be in reverse
+    # order, multi(Y,X):
+    inlabruCheck <- packageCheck("inlabru", "2.13.0.9005")
+    if(is.na(inlabruCheck)) {
+      warning("Please install a inlabru recent version from git.")
+    } else {
+      ret$mapper <-
+      inlabru::bm_multi(
+        list(
+          inlabru::bru_get_mapper(Y),
+          inlabru::bru_get_mapper(X)
+        )
+      )
+    }
 
+    return(ret)
   }
 )
 #' @rdname kronecker
@@ -356,20 +368,28 @@ setMethod(
     }
 
     ### follows INLA:::inla.rgeneric.define() but no assign env
-    rmodel <- list(
-      f = list(
-        model = "rgeneric",
-        n = n,
-        rgeneric = list(
-          definition =
-            compiler::cmpfun(
-              kmodel,
-              options = list(optimize = 3L)),
-          debug = debug,
-          optimize = TRUE
+    rmodel <- structure(
+      list(
+        f = list(
+          model = "rgeneric",
+          n = n,
+          rgeneric = structure(
+            list(
+              definition =
+                compiler::cmpfun(
+                  kmodel,
+                  options = list(optimize = 3L)),
+              debug = debug,
+              optimize = TRUE
+            ),
+            # inla.rgeneric is needed to support INLA before August 2025
+            class = c("inla.rgeneric.f", "inla.rgeneric")
+          )
         )
-      )
+      ),
+      class = c("rgeneric", "inla.rgeneric")
     )
+
     if((!is.null(X$f$extraconstr)) |
        (!is.null(Y$f$extraconstr))) {
       rmodel$f$extraconstr <-
@@ -383,10 +403,24 @@ setMethod(
             " 'extraconstr' built\n")
       }
     }
-    class(rmodel) <- c("rgeneric", "inla.rgeneric")
-    class(rmodel$f$rgeneric) <- class(rmodel)
-    return(rmodel)
 
+    # Note: kron(X,Y) gives X-major ordering (the X-index varies slowly, the
+    # Y-index varies quickly), which requires the mappers to be in reverse
+    # order, multi(Y,X):
+    inlabruCheck <- packageCheck("inlabru", "2.13.0.9005")
+    if(is.na(inlabruCheck)) {
+      warning("Please install a inlabru recent version from git.")
+    } else {
+      rmodel$mapper <-
+      inlabru::bm_multi(
+        list(
+          inlabru::bru_get_mapper(Y),
+          inlabru::bru_get_mapper(X)
+        )
+      )
+    }
+
+    return(rmodel)
   }
 )
 #' @rdname kronecker
@@ -469,20 +503,28 @@ setMethod(
     }
 
     ### follows INLA:::inla.rgeneric.define() but no assign env
-    rmodel <- list(
-      f = list(
-        model = "rgeneric",
-        n = n,
-        rgeneric = list(
-          definition =
-            compiler::cmpfun(
-              kmodel,
-              options = list(optimize = 3L)),
-          debug = debug,
-          optimize = TRUE
+    rmodel <- structure(
+      list(
+        f = list(
+          model = "rgeneric",
+          n = n,
+          rgeneric = structure(
+            list(
+              definition =
+                compiler::cmpfun(
+                  kmodel,
+                  options = list(optimize = 3L)),
+              debug = debug,
+              optimize = TRUE
+            ),
+            # inla.rgeneric is needed to support INLA before August 2025
+            class = c("inla.rgeneric.f", "inla.rgeneric")
+          )
         )
-      )
+      ),
+      class = c("rgeneric", "inla.rgeneric")
     )
+
     if((!is.null(X$f$extraconstr)) |
        (!is.null(Y$f$extraconstr))) {
       rmodel$f$extraconstr <-
@@ -496,10 +538,24 @@ setMethod(
             " 'extraconstr' built!\n")
       }
     }
-    class(rmodel) <- c("rgeneric", "inla.rgeneric")
-    class(rmodel$f$rgeneric) <- class(rmodel)
-    return(rmodel)
 
+    # Note: kron(X,Y) gives X-major ordering (the X-index varies slowly, the
+    # Y-index varies quickly), which requires the mappers to be in reverse
+    # order, multi(Y,X):
+    inlabruCheck <- packageCheck("inlabru", "2.13.0.9005")
+    if(is.na(inlabruCheck)) {
+      warning("Please install a inlabru recent version from git.")
+    } else {
+      rmodel$mapper <-
+      inlabru::bm_multi(
+        list(
+          inlabru::bru_get_mapper(Y),
+          inlabru::bru_get_mapper(X)
+        )
+      )
+    }
+
+    return(rmodel)
   }
 )
 #' @rdname kronecker
@@ -582,6 +638,7 @@ setMethod(
       model = kmodel,
       optimize = TRUE
     )
+    class(rmodel) <- c("rgeneric", class(rmodel))
 
     if((!is.null(X$f$extraconstr)) |
        (!is.null(Y$f$extraconstr))) {
@@ -596,9 +653,24 @@ setMethod(
             " 'extraconstr' built!\n")
       }
     }
-    class(rmodel) <- c("rgeneric", "inla.rgeneric")
-    class(rmodel$f$rgeneric) <- class(rmodel)
 
+    # Note: kron(X,Y) gives X-major ordering (the X-index varies slowly, the
+    # Y-index varies quickly), which requires the mappers to be in reverse
+    # order, multi(Y,X):
+    inlabruCheck <- packageCheck("inlabru", "2.13.0.9005")
+    if(is.na(inlabruCheck)) {
+      warning("Please install a inlabru recent version from git.")
+    } else {
+      rmodel$mapper <-
+      inlabru::bm_multi(
+        list(
+          inlabru::bru_get_mapper(Y),
+          inlabru::bru_get_mapper(X)
+        )
+      )
+    }
+
+    return(rmodel)
   }
 )
 #' Kronecker (product) between `extraconstr`,
@@ -606,9 +678,13 @@ setMethod(
 #' @name extraconstr
 #' @param c1,c2 named list with two elements:
 #' `A` and `e`, where `nrow(A)` should be equal
-#' to `length(e)`. This is an extraconstr.
-#' @param n1,n2 integer with each model's length
-#' @returns extraconstr
+#' to `length(e)`. These are constraint definitions.
+#' @param n1,n2 integer with each model's length.
+#' @returns The constraint definition for the
+#' whole latent model built from the Kronecker product.
+#' A length two named list. 'A' a matrix and
+#' 'e' a vector where nrow(A)=length(e) and
+#' ncol(A)=(n1*n2).
 kronecker_extraconstr <- function(c1, c2, n1, n2) {
   if(is.null(c1)) {
     if(is.null(c2)) {
@@ -630,11 +706,76 @@ kronecker_extraconstr <- function(c1, c2, n1, n2) {
         A = rbind(
           kronecker(c1$A, diag(ncol(c2$A))),
           kronecker(diag(ncol(c1$A)), c2$A)
-        ),
+        )[-1, , drop = FALSE], ## remove one redundant
         e = c(rep(c1$e, each = ncol(c2$A)),
-              rep(c2$e, ncol(c1$A)))
+              rep(c2$e, ncol(c1$A)))[-1] ## rm 1
       )
     }
   }
+  return(ret)
+}
+
+
+#' @title Combine two or more `cgeneric` or `rgeneric` models
+#' @description Constructs a multiple kronecker product model from a list of model
+#' objects. The resulting model contains a corresponding [inlabru::bm_multi()]
+#' mapper. This can be used as an alternative to a binary tree of kronecker
+#' product models.
+#' @param models A list of `cgeneric` or `rgeneric` models, optionally with names
+#' @details The last model in the list has the slowest index variation, and the
+#'   first model has the fastest index variation. This matches the latent
+#'   variable ordering of standard `INLA:f()` model components with
+#'   `(main, group, replicate)`.
+#' @param \dots Arguments passed on to every `kronecker()` call.
+#' @returns A 'cgeneric' or 'rgeneric' model object, containing a
+#'   multi-kronecker product model, with a corresponding [inlabru::bm_multi()]
+#'   mapper.
+#' @rdname multi_generic_model
+#' @export
+#' @examples
+#' R1 <- Matrix(crossprod(diff(diag(4))))
+#' m1 <- cgeneric("generic0", R = R1, param = c(1, NA),
+#'   scale = FALSE, useINLAprecomp = FALSE)
+#' R2 <- Matrix(crossprod(diff(diag(3))))
+#' m2 <- cgeneric("generic0", R = R2, param = c(1, NA),
+#'   scale = FALSE, useINLAprecomp = FALSE)
+#' m3 <- cgeneric("iid", n = 2, param = c(1, 0.5),
+#'   useINLAprecomp = FALSE)
+#' multi123 <- multi_generic_model(
+#'   list(m1 = m1, m2 = m2, m3 = m3),
+#'   useINLAprecomp = FALSE
+#' )
+#' prec(multi123, theta = 0.0)
+#' if(!is.na(packageCheck("inlabru", "2.13.0.9005"))) {
+#'   print(multi123$mapper)
+#' }
+multi_generic_model <- function(models, ...) {
+  stopifnot(is.list(models))
+  stopifnot(length(models) >= 1L)
+
+  models <- lapply(models, function(model) {
+    if (inherits(model, c("rgeneric", "inla.rgeneric"))) {
+      rgeneric(model)
+    } else if (inherits(model, c("cgeneric", "inla.cgeneric"))) {
+      cgeneric(model)
+    } else {
+      stop("Each 'models' element must be convertible to class 'cgeneric' or 'rgeneric'")
+    }
+  })
+
+  ret <- models[[1]]
+  for (i in seq_along(models)[-1]) {
+    ret <- Matrix::kronecker(models[[i]], ret, ...)
+  }
+
+  inlabruCheck <- packageCheck("inlabru", "2.13.0.9005")
+  if(is.na(inlabruCheck)) {
+    warning("Please install a inlabru recent version from git.")
+  } else {
+    ret[["mapper"]] <- inlabru::bm_multi(
+      lapply(models, inlabru::bru_get_mapper)
+    )
+  }
+
   return(ret)
 }

@@ -16,7 +16,7 @@
 #' sum-to-zero constraint. Default is TRUE.
 #' @param scale logical indicating if it is to scale
 #' the model. See detais.
-#' @param ... arguments (debug,useINLAprecomp,libpath)
+#' @param ... arguments (debug,useINLAprecomp,shlib)
 #' passed on to [cgeneric()].
 #' @details
 #' The precision matrix is defined as
@@ -59,7 +59,7 @@ cgeneric_generic0 <-
 
     stopifnot(param[1]>0)
     if(is.na(param[2])) {
-      param[2] = 0.0
+      param[2] <- 0.0
     }
     stopifnot(param[2]>=0)
     stopifnot(param[2]<=1)
@@ -93,31 +93,29 @@ cgeneric_generic0 <-
     }
 
     if(is.null(dotArgs$useINLAprecomp)) {
-      useINLAprecomp <- FALSE
+      useINLAprecomp <- TRUE
     } else {
       useINLAprecomp <- dotArgs$useINLAprecomp
     }
-    if(useINLAprecomp) {
-     libpath <- cgeneric_libpath(
-       package = "graphpcor",
-       useINLAprecomp = TRUE,
-       debug = debug)
-    } else {
-      libpath <- cgeneric_libpath(
-        package = "INLAtools",
-        useINLAprecomp = FALSE,
-        debug = debug)
+    INLAvcheck <- packageCheck("INLA", "25-10-28")
+    if(is.na(INLAvcheck) & useINLAprecomp) {
+      useINLAprecomp <- FALSE
+      warning("INLA version is old. Setting 'useINLAprecomp = FALSE'!")
     }
+    shlib <- cgeneric_shlib(
+      package = "INLAtools",
+      useINLAprecomp = useINLAprecomp,
+      debug = debug)
 
     the_model <- do.call(
-      what = "cgeneric",
+      what = "cgenericBuilder",
       args = list(
         model = "inla_cgeneric_generic0",
         n=as.integer(n),
         param=param,
         Rgraph = R,
         debug = debug,
-        libpath = libpath
+        shlib = shlib
       )
     )
 

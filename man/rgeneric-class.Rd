@@ -3,44 +3,72 @@
 \docType{class}
 \name{rgeneric-class}
 \alias{rgeneric-class}
-\alias{graph.inla.rgeneric}
-\alias{prec.inla.rgeneric}
-\alias{initial.inla.rgeneric}
-\alias{mu.inla.rgeneric}
-\alias{prior.inla.rgeneric}
-\title{The \code{rgeneric} class for \code{\link[=rgeneric]{rgeneric()}}.}
+\alias{rgeneric}
+\alias{rgeneric.default}
+\alias{rgeneric.rgeneric}
+\alias{rgeneric.inla.rgeneric}
+\alias{graph.rgeneric}
+\alias{prec.rgeneric}
+\alias{initial.rgeneric}
+\alias{mu.rgeneric}
+\alias{prior.rgeneric}
+\title{Organize data for the latent GMRF R interface for \code{INLA}.}
 \usage{
-\method{graph}{inla.rgeneric}(model, ...)
+rgeneric(model, debug = FALSE, compile = TRUE, optimize = TRUE, ...)
 
-\method{prec}{inla.rgeneric}(model, ...)
+\method{rgeneric}{default}(model, debug = FALSE, compile = TRUE, optimize = TRUE, ...)
 
-\method{initial}{inla.rgeneric}(model)
+\method{rgeneric}{rgeneric}(model, ...)
 
-\method{mu}{inla.rgeneric}(model, theta)
+\method{rgeneric}{inla.rgeneric}(model, ...)
 
-\method{prior}{inla.rgeneric}(model, theta)
+\method{graph}{rgeneric}(model, ...)
+
+\method{prec}{rgeneric}(model, ...)
+
+\method{initial}{rgeneric}(model)
+
+\method{mu}{rgeneric}(model, theta)
+
+\method{prior}{rgeneric}(model, theta)
 }
 \arguments{
-\item{model}{a \code{inla.rgeneric} model object}
+\item{model}{a \code{rgeneric} model object}
+
+\item{debug}{logical indicating debug state.}
+
+\item{compile}{logical indicating to compile the model.}
+
+\item{optimize}{logical indicating if only the elements
+of the precision matrix are returned.}
 
 \item{...}{additional parameter such as 'theta'
 If 'theta' is not supplied, initial will be taken.}
 
 \item{theta}{the parameter.}
 }
+\value{
+\code{rgeneric}/ \code{inla.rgeneric} object.
+}
 \description{
-The \code{rgeneric} class for \code{\link[=rgeneric]{rgeneric()}}.
+Organize data for the latent GMRF R interface for \code{INLA}.
+
+The rgeneric default method.
 }
 \section{Functions}{
 \itemize{
-\item \code{graph(inla.rgeneric)}: The graph method for 'inla.rgeneric'
+\item \code{rgeneric(rgeneric)}: Returns the model object unchanged.
 
-\item \code{prec(inla.rgeneric)}: The precision method for an \code{inla.rgeneric} object.
+\item \code{rgeneric(inla.rgeneric)}: Converts a regular \code{inla.rgeneric} object to \code{rgeneric}.
 
-\item \code{initial(inla.rgeneric)}: The initial method for 'inla.rgeneric'
+\item \code{graph(rgeneric)}: The graph method for 'rgeneric'
 
-\item \code{mu(inla.rgeneric)}: The mu method for 'inla.rgeneric'
+\item \code{prec(rgeneric)}: The precision method for an \code{rgeneric} object.
 
-\item \code{prior(inla.rgeneric)}: The prior metho for 'inla.rgeneric'
+\item \code{initial(rgeneric)}: The initial method for 'rgeneric'
+
+\item \code{mu(rgeneric)}: The mu method for 'rgeneric'
+
+\item \code{prior(rgeneric)}: The prior metho for 'rgeneric'
 
 }}

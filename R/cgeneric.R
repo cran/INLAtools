@@ -1,13 +1,11 @@
-#' @title Defines a GMRF model to be used with the
-#' C interface for `INLA` as a latent model.
+#' @rdname cgeneric-class
 #' @description
-#' This prepare data for the C type to organize data needed
-#' for building latent models which are characterized
-#' from given model parameters \eqn{\theta} and the
-#' the following model elements.
+#' A GMRF is defined from model parameters \eqn{\theta} that
+#' would parametrize a (sparse) precision matrix.
+#'
+#' The elements of a GMR are:
 #'  *  `graph` to define the non-zero precision matrix pattern.
 #'  only the upper triangle including the diagonal is needed.
-#'  The order should be by line.
 #'  * `Q` vector where the
 #'     * first element (N) is the size of the matrix,
 #'     * second element (M) is the number of non-zero
@@ -21,62 +19,58 @@
 #'    * remaining elements should be the initials for the model parameters.
 #'  * `log.norm.const` log of the normalizing constant.
 #'  * `log.prior` log of the prior for the model parameters.
-#'
-#' See details in [INLA::cgeneric()]
+#' @note
+#' The `graph` and `Q` non-zero pattern should match,
+#' its elements should be ordered by row,
+#'and only its upper part stored.
 #' @param model object class for what a `cgeneric` method exists.
 #' if it is a character, a specific function will be called,
 #' for example cgeneric("iid", ...") calls cgeneric_iid(...),
 #' see [cgeneric_iid()] and [cgeneric_generic0()].
 #' @param ... additional arguments passed on to methods
-#' @return  named list of `cgeneric` class containing
-#'  the named list `f` that contain `model` (a character
-#'  always equal to `cgeneric`), `n` (integer)
-#'  and `cgeneric` as a named list that contains the
+#' @returns a method to build a `cgeneric` should return
+#' a named list of `cgeneric` class that contains a
+#'  named list `f` that contains (at least):
+#'  * `model` a character always equal to `cgeneric`,
+#'  * `n` an integer greater than 0, and
+#'  * `cgeneric` as a named list that contains the
 #'  data needed to define the model. Each element on
 #'  ...$f$cgeneric is also a named list containing
 #'  `ints`, `doubles`, `characters`, `matrices`
 #'  and `smatrices`.
+#'  * (possible) `extraconstr` as a named list with: `A` as a
+#'   `n` times `k` matrix and `e` as a length `k` vector.
+#'  * (possible) `bm_mapper` (TO DO) mapper for `inlabru` package.
+#'
+#'  The `cgeneric_shlib` function returns a `character`
+#'  with the path to the shared lib.
 #' @seealso [INLA::cgeneric()] and [methods()]
 #' @export
 cgeneric <- function(model, ...) {
   UseMethod("cgeneric")
 }
-#' @describeIn cgeneric
-#' This calls [INLA::inla.cgeneric.define()]
+#' @rdname cgeneric-class
 #' @param model object class for what a `cgeneric` method exists.
-#' E.g., if it is a character, a specific function will be called:
-#'  cgeneric("iid", ...") calls cgeneric_iid(...)
-#' @param debug integer, used as verbose in debug.
-#' @param useINLAprecomp logical, indicating if it is to use
-#' the shared object previously copied and compiled by INLA.
-#' @param package character giving the name of the package
-#' that contains the `cgeneric` model.
-#' @param libpath character, to inform the full path to the
-#'  shared dynamic library object (this override the
-#'  arguments `useINLAprecomp` and `package`).
-#' @param ... additional arguments passed to to methods.
-#' Some arguments can be used to define specific behavior,
-#' such as `debug` (integer, used as verbose in debug),
-#' `useINLAprecomp` (logical, indicating if it is to use
-#' the shared object previously copied and compiled by INLA),
-#' `package` (character used if `useINLAprecomp` is TRUE, with
-#' the package name to build the path) and `libpath` (character,
-#'  with the path to the shared dynamic library object: this
-#'  override `useINLAprecomp` and `package`).
-#' @details
-#' Method for when `model` is a character.
-#' E.g. cgeneric(model = "generic0")
-#' calls [cgeneric_generic0]
+#' E.g., if it is a character, a specific function will be called.
+#' E.g. cgeneric("iid", ...") calls cgeneric_iid(...).
+#' @param ... arguments passed from the
+#' [cgeneric()] methods. FIt should include
+#' `n` and `debug`. For `cgenericBuild` it should
+#'  `model` as a character string with the name of the
+#'  C function and `shlib` as the path to the
+#'  shared object containing such function.
+#'  If `shlib` is not provided it can be built
+#'  using `inla_shlib` from the arguments,
+#'  `package` (character with the R package containing it),
+#'  `useINLAprecomp` (logical to indicate if `INLA` contains it
+#'  and to use it).
 #' @importFrom methods is
-#' @importFrom methods existsFunction
 #' @export
 cgeneric.character <- function(
     model,
-    debug = FALSE,
-    package,
-    useINLAprecomp = TRUE,
-    libpath = NULL,
     ...) {
+
+  dotArgs <- list(...)
 
   ## some "convention" here:
   if(length(grep("cgeneric_", model))==0) {
@@ -84,64 +78,114 @@ cgeneric.character <- function(
   }
   if(any(model %in%
          paste0("cgeneric_",
-                c("iid", "generic0", "libpath")))) {
-    if(debug) {
+                c("iid", "generic0", "shlib")))) {
+    if(!is.null(dotArgs$debug) && dotArgs$debug) {
       cat("call", model, "\n")
     }
     return(do.call(
       what = model,
-      args = c(
-        list(debug = debug),
-        list(...)
+      args = dotArgs
       )
-    ))
+    )
+  } else {
+
+    out <- try(do.call(
+      what = model,
+      args = dotArgs
+    ), silent = TRUE)
+
+    if((inherits(out, "cgeneric")) |
+       (inherits(out, "inla.cgeneric"))) {
+      return(out)
+    } else {
+
+      fn <- findGetFunction(
+        fName = model
+      )
+      if(is.function(fn)) {
+        return(cgeneric(model = fn, ...))
+      }
+    }
   }
 
-  if(is.null(libpath)) {
-    libpath <- cgeneric_libpath(
-      fName = model,
-      debug = debug,
-      package = package,
-      useINLAprecomp = useINLAprecomp
+}
+#' @rdname cgeneric-class
+#' @export
+cgeneric.function <- function(
+    model,
+    ...) {
+  out <- do.call(
+    what = model,
+    args = list(...)
     )
-  }
+  return(out)
+}
+
+
+#' @describeIn cgeneric-class Returns the model object unchanged.
+#' @export
+cgeneric.cgeneric <- function(model, ...) {
+  return(model)
+}
+
+#' @describeIn cgeneric-class Converts a regular `inla.cgeneric` object to `cgeneric`.
+#' @export
+cgeneric.inla.cgeneric <- function(model, ...) {
+  # TODO: Is it enough to just add the "cgeneric" class name, or does the object need to be
+  # regenerated/modified as well?
+  warning("TODO: check whether basic inla.cgeneric objects fulfil the assumptions of the cgeneric class")
+  class(model) <- c("cgeneric", class(model))
+  return(model)
+}
+
+
+#' @rdname cgeneric-class
+#' @export
+cgenericBuilder <- function(
+    ...) {
 
   ## do what INLA::inla.cgeneric.define() does
 
-  d.args <- list(...)
- ## d.args <- eval(as.list(match.call())[-c(1:2)])
-  nargs <- names(d.args)
+  dotArgs <- list(...)
+  nargs <- names(dotArgs)
   if(any(nargs == ""))
     stop("Please name the arguments!")
   if(!any(nargs == "n"))
     stop("Please provid 'n'!")
-  n <- as.integer(d.args$n)
-  stopifnot(n>=1)
-  d.args <- d.args[setdiff(1:length(d.args),
-                           which(nargs=='n'))]
-
-  args <- c(
-    list(model = model,
-         n = as.integer(n),
-	       debug = as.integer(debug),
-	       shlib = as.character(libpath)),
-    d.args)
+  if(!any(nargs == "debug"))
+    dotArgs$debug <- FALSE
+  if(!any(nargs == "shlib"))
+    stop("Please provid 'shlib'!")
+  if(!any(nargs == "model"))
+    stop("Please provid 'model'!")
+  stopifnot(dotArgs$n>=1)
+  ind <- pmatch(c("n", "debug"),
+                names(dotArgs))
+  dotArgs <- c(list(
+    n = dotArgs$n,
+    debug = dotArgs$debug),
+    dotArgs[setdiff(1:length(dotArgs),ind)]
+  )
+  dotArgs$n <- as.integer(dotArgs$n)
+  dotArgs$debug <- as.integer(dotArgs$debug)
+  dotArgs$model <- as.character(dotArgs$model)
+  dotArgs$shlib <- as.character(dotArgs$shlib)
 
   nM <- length(iM <- which(
-    sapply(args, function(x)
+    sapply(dotArgs, function(x)
       is(x, "Matrix"))))
   nm <- length(im <- which(
-    sapply(args, is.matrix)))
+    sapply(dotArgs, is.matrix)))
   ni <- length(ii <- setdiff(
-    which(sapply(args, is.integer)), im))
+    which(sapply(dotArgs, is.integer)), im))
   nd <- length(id <- setdiff(
-    which(sapply(args, is.double)), im))
+    which(sapply(dotArgs, is.double)), im))
   nc <- length(ic <- which(
-    sapply(args, is.character)))
+    sapply(dotArgs, is.character)))
   stopifnot(ni>1)
   stopifnot(ni>1)
 
-  if(debug) {
+  if(dotArgs$debug) {
     cat("The cgeneric model data contains:\n",
         ni, "ints",
         nc, "characters",
@@ -150,24 +194,24 @@ cgeneric.character <- function(
         nM, "smatrices\n")
   }
 
-  cmodel <- args[c("model", "shlib", "n", "debug")]
+  cmodel <- dotArgs[c("model", "shlib", "n", "debug")]
   cmodel$data <- vector("list", 5L)
   names(cmodel$data) <- c(
     "ints", "doubles", "characters",
     "matrices", "smatrices")
-  cmodel$data$ints <- args[ii]
-  if(nd>0) cmodel$data$doubles <- args[id]
-  cmodel$data$characters <- args[ic]
+  cmodel$data$ints <- dotArgs[ii]
+  if(nd>0) cmodel$data$doubles <- dotArgs[id]
+  cmodel$data$characters <- dotArgs[ic]
   if(nm>0) {
-    cmodel$data$matrices <- args[im]
+    cmodel$data$matrices <- dotArgs[im]
     for(i in 1:nm) {
       cmodel$data$matrices[[i]] <-
         c(dim(cmodel$data$matrices[[i]]),
-          cmodel$data$matrices[[i]])
+          t(cmodel$data$matrices[[i]])) ## columnwise...
     }
   }
   if(nM>0) {
-	  cmodel$data$smatrices <- args[iM]
+	  cmodel$data$smatrices <- dotArgs[iM]
 	  for(i in 1:nM) {
 	    smi <- upperPadding(cmodel$data$smatrices[[i]])
 	    cmodel$data$smatrices[[i]] <- c(
@@ -176,35 +220,44 @@ cgeneric.character <- function(
 	    )
 	  }
   }
-  class(cmodel) <- c("cgeneric",
-		     "inla.cgeneric") ## this is needed in INLA::f()
-  cmodel <- list(f=list(
-    model = "cgeneric",
-    n = cmodel$n,
-    cgeneric = cmodel))
-  class(cmodel) <- class(cmodel$f$cgeneric)
-  return(cmodel)
+  class(cmodel) <- c("inla.cgeneric.f", ## this is needed in INLA::f() from August 2025
+                     "inla.cgeneric") ##  this is needed for older INLA
+  cmodel_wrapper <- structure(
+    list(
+      f = list(
+        model = "cgeneric",
+        n = as.integer(cmodel$n),
+        cgeneric = cmodel
+      ),
+      mapper = inlabru::bm_index(cmodel$n)
+    ),
+    class = c("cgeneric", "inla.cgeneric")
+  )
+  return(cmodel_wrapper)
 }
-#' @describeIn cgeneric
-#' Get the shared lib path to use in a `cgeneric` model
-#' @param fName character with the name of the function
-#' used to build the `cgeneric` model.
-#' @returns character containing the path to the shared lib
-cgeneric_libpath <- function(
-    fName,
+#' @rdname cgeneric-class
+#' @param debug integer, used as verbose in debug.
+#' @param useINLAprecomp logical, indicating if it is to use
+#' the shared object previously copied and compiled by INLA.
+#' @param package character giving the name of the package
+#' that contains the `cgeneric` model.
+#' @export
+cgeneric_shlib <- function(
+    debug,
     package,
-    useINLAprecomp = FALSE,
-    debug = FALSE) {
+    useINLAprecomp) {
 
-  if(missing(package)) {
-    package <- attr(
-      findGetFunction(
-      fName = fName,
-      debug = debug
-    ), "package")
+  if(missing(package) || is.null(package)) {
+    stop("please provide package!")
+  }
+  if(missing(debug)) {
+    debug <- FALSE
+  }
+  if(missing(useINLAprecomp)) {
+    useINLAprecomp <- TRUE
   }
 
-  nbit <- 8 * .Machine$sizeof.pointer
+  nbit <- 8 * (.Machine$sizeof.pointer)
   if(useINLAprecomp) {
     OS <- .Platform$OS.type
     if(OS=="unix") {
@@ -213,13 +266,13 @@ cgeneric_libpath <- function(
         OSb <- paste0("mac/", nbit, "bit/")
       }
       if(Sys.info()[["machine"]] == "arm64") {
-        OSb <- "mac.arm64"
+        OSb <- "mac.arm64/"
       }
     } else {
       OSb <- paste0(OS, "/", nbit, "bit/")
     }
     shlib <- paste0(
-      find.package("INLA"), OSb,
+      find.package("INLA"), "/bin/", OSb,
       "external/", package,
       "/lib", package, ".so")
     if(debug) {
@@ -227,14 +280,14 @@ cgeneric_libpath <- function(
           shlib, "\n")
     }
   } else {
-    libpath <- system.file("libs",
-                           package = package)
+    shlib <- system.file("libs",
+                         package = package)
     if (Sys.info()["sysname"] == "Windows") {
       shlib <- file.path(
-        libpath,
+        shlib,
         paste0("x", nbit, "/", package, ".dll"))
     } else {
-      shlib <- file.path(libpath,
+      shlib <- file.path(shlib,
                          paste0(package, ".so"))
     }
     if(debug) {

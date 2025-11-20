@@ -3,25 +3,45 @@
 \docType{class}
 \name{cgeneric-class}
 \alias{cgeneric-class}
+\alias{cgeneric}
 \alias{cgeneric.character}
-\alias{cgeneric_libpath}
-\title{The \code{cgeneric} class for \code{\link[=cgeneric]{cgeneric()}}.}
+\alias{cgeneric.function}
+\alias{cgeneric.cgeneric}
+\alias{cgeneric.inla.cgeneric}
+\alias{cgenericBuilder}
+\alias{cgeneric_shlib}
+\title{Organize data for the latent GMRF C interface for \code{INLA}.}
 \usage{
-\method{cgeneric}{character}(
-  model,
-  debug = FALSE,
-  package,
-  useINLAprecomp = TRUE,
-  libpath = NULL,
-  ...
-)
+cgeneric(model, ...)
 
-cgeneric_libpath(fName, package, useINLAprecomp = FALSE, debug = FALSE)
+\method{cgeneric}{character}(model, ...)
+
+\method{cgeneric}{`function`}(model, ...)
+
+\method{cgeneric}{cgeneric}(model, ...)
+
+\method{cgeneric}{inla.cgeneric}(model, ...)
+
+cgenericBuilder(...)
+
+cgeneric_shlib(debug, package, useINLAprecomp)
 }
 \arguments{
 \item{model}{object class for what a \code{cgeneric} method exists.
-E.g., if it is a character, a specific function will be called:
-cgeneric("iid", ...") calls cgeneric_iid(...)}
+E.g., if it is a character, a specific function will be called.
+E.g. cgeneric("iid", ...") calls cgeneric_iid(...).}
+
+\item{...}{arguments passed from the
+\code{\link[=cgeneric]{cgeneric()}} methods. FIt should include
+\code{n} and \code{debug}. For \code{cgenericBuild} it should
+\code{model} as a character string with the name of the
+C function and \code{shlib} as the path to the
+shared object containing such function.
+If \code{shlib} is not provided it can be built
+using \code{inla_shlib} from the arguments,
+\code{package} (character with the R package containing it),
+\code{useINLAprecomp} (logical to indicate if \code{INLA} contains it
+and to use it).}
 
 \item{debug}{integer, used as verbose in debug.}
 
@@ -30,39 +50,66 @@ that contains the \code{cgeneric} model.}
 
 \item{useINLAprecomp}{logical, indicating if it is to use
 the shared object previously copied and compiled by INLA.}
-
-\item{libpath}{character, to inform the full path to the
-shared dynamic library object (this override the
-arguments \code{useINLAprecomp} and \code{package}).}
-
-\item{...}{additional arguments passed to to methods.
-Some arguments can be used to define specific behavior,
-such as \code{debug} (integer, used as verbose in debug),
-\code{useINLAprecomp} (logical, indicating if it is to use
-the shared object previously copied and compiled by INLA),
-\code{package} (character used if \code{useINLAprecomp} is TRUE, with
-the package name to build the path) and \code{libpath} (character,
-with the path to the shared dynamic library object: this
-override \code{useINLAprecomp} and \code{package}).}
-
-\item{fName}{character with the name of the function
-used to build the \code{cgeneric} model.}
 }
 \value{
-character containing the path to the shared lib
+a method to build a \code{cgeneric} should return
+a named list of \code{cgeneric} class that contains a
+named list \code{f} that contains (at least):
+\itemize{
+\item \code{model} a character always equal to \code{cgeneric},
+\item \code{n} an integer greater than 0, and
+\item \code{cgeneric} as a named list that contains the
+data needed to define the model. Each element on
+...$f$cgeneric is also a named list containing
+\code{ints}, \code{doubles}, \code{characters}, \code{matrices}
+and \code{smatrices}.
+\item (possible) \code{extraconstr} as a named list with: \code{A} as a
+\code{n} times \code{k} matrix and \code{e} as a length \code{k} vector.
+\item (possible) \code{bm_mapper} (TO DO) mapper for \code{inlabru} package.
+}
+
+The \code{cgeneric_shlib} function returns a \code{character}
+with the path to the shared lib.
 }
 \description{
-The \code{cgeneric} class for \code{\link[=cgeneric]{cgeneric()}}.
+A GMRF is defined from model parameters \eqn{\theta} that
+would parametrize a (sparse) precision matrix.
+
+The elements of a GMR are:
+\itemize{
+\item \code{graph} to define the non-zero precision matrix pattern.
+only the upper triangle including the diagonal is needed.
+\item \code{Q} vector where the
+\itemize{
+\item first element (N) is the size of the matrix,
+\item second element (M) is the number of non-zero
+elements in the upper part (including) diagonal
+\item the remaining (M) elements are the actual
+precision (upper triangle plus diagonal) elements
+whose order shall follow the graph definition.
 }
-\details{
-Method for when \code{model} is a character.
-E.g. cgeneric(model = "generic0")
-calls \link{cgeneric_generic0}
+\item \code{mu} the mean vector,
+\item \code{initial} vector with
+\itemize{
+\item first element as the number of the parameters in the model
+\item remaining elements should be the initials for the model parameters.
+}
+\item \code{log.norm.const} log of the normalizing constant.
+\item \code{log.prior} log of the prior for the model parameters.
+}
 }
 \section{Functions}{
 \itemize{
-\item \code{cgeneric(character)}: This calls \code{\link[INLA:cgeneric]{INLA::inla.cgeneric.define()}}
+\item \code{cgeneric(cgeneric)}: Returns the model object unchanged.
 
-\item \code{cgeneric_libpath()}: Get the shared lib path to use in a \code{cgeneric} model
+\item \code{cgeneric(inla.cgeneric)}: Converts a regular \code{inla.cgeneric} object to \code{cgeneric}.
 
 }}
+\note{
+The \code{graph} and \code{Q} non-zero pattern should match,
+its elements should be ordered by row,
+and only its upper part stored.
+}
+\seealso{
+\code{\link[INLA:cgeneric]{INLA::cgeneric()}} and \code{\link[=methods]{methods()}}
+}

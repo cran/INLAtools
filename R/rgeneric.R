@@ -1,5 +1,4 @@
-#' Define rgeneric methods.
-#' @rdname rgeneric
+#' @rdname rgeneric-class
 #' @param model an object used to define the model.
 #' Its class will define which method is considered.
 #' @param debug logical indicating debug state.
@@ -8,7 +7,7 @@
 #' of the precision matrix are returned.
 #' @param ... additional arguments to be used internally
 #' for the model, for example, additional data.
-#' @return a `inla.rgeneric` object.
+#' @returns `rgeneric`/ `inla.rgeneric` object.
 #' @export
 rgeneric <- function(model,
                      debug = FALSE,
@@ -18,8 +17,8 @@ rgeneric <- function(model,
   UseMethod("rgeneric")
 }
 #' The rgeneric default method.
-#' @rdname rgeneric
-#' @param model the model defined as a function.
+#' @rdname rgeneric-class
+#' @param model For the default method, the model defined as a function.
 #' See the 'rgeneric' vignette from the INLA package.
 #' @export
 rgeneric.default <- function(model,
@@ -27,7 +26,7 @@ rgeneric.default <- function(model,
                              compile = TRUE,
                              optimize = TRUE,
                              ...) {
-## it uses INLA::inla.rgeneric.define()
+  ## it uses INLA::inla.rgeneric.define()
 
   rmodel <- INLA::inla.rgeneric.define(
     model = model,
@@ -37,28 +36,41 @@ rgeneric.default <- function(model,
     ...
   )
 
-  class(rmodel) <- "inla.rgeneric"
-  class(rmodel$f$rgeneric) <- "inla.rgeneric"
+  class(rmodel) <- c("rgeneric", class(rmodel))
   return(rmodel)
 }
-#' @describeIn rgeneric
-#' The graph method for 'inla.rgeneric'
-#' @param model a `inla.rgeneric` model object
+
+#' @describeIn rgeneric-class Returns the model object unchanged.
+#' @export
+rgeneric.rgeneric <- function(model, ...) {
+  return(model)
+}
+
+#' @describeIn rgeneric-class Converts a regular `inla.rgeneric` object to `rgeneric`.
+#' @export
+rgeneric.inla.rgeneric <- function(model, ...) {
+  class(model) <- c("rgeneric", class(model))
+  return(model)
+}
+
+#' @describeIn rgeneric-class
+#' The graph method for 'rgeneric'
+#' @param model a `rgeneric` model object
 #' @param ... additional arguments
 #' @export
-graph.inla.rgeneric <- function(model, ...) {
+graph.rgeneric <- function(model, ...) {
   return(do.call(
     what = "inla.rgeneric.q",
     args = list(rmodel = model,
                 cmd = "graph")
     ))
 }
-#' @describeIn rgeneric
-#' The precision method for an `inla.rgeneric` object.
+#' @describeIn rgeneric-class
+#' The precision method for an `rgeneric` object.
 #' @param ... additional parameter such as 'theta'
 #' If 'theta' is not supplied, initial will be taken.
 #' @export
-prec.inla.rgeneric <- function(model, ...) {
+prec.rgeneric <- function(model, ...) {
   mc <- list(...)
   nargs <- names(mc)
   if(any(nargs == "theta")) {
@@ -75,20 +87,20 @@ prec.inla.rgeneric <- function(model, ...) {
                 theta = theta)
   ))
 }
-#' @describeIn rgeneric
-#' The initial method for 'inla.rgeneric'
+#' @describeIn rgeneric-class
+#' The initial method for 'rgeneric'
 #' @export
-initial.inla.rgeneric <- function(model) {
+initial.rgeneric <- function(model) {
   return(do.call(
     what = "inla.rgeneric.q",
     args = list(rmodel = model,
                 cmd = "initial")
   ))
 }
-#' @describeIn rgeneric
-#' The mu method for 'inla.rgeneric'
+#' @describeIn rgeneric-class
+#' The mu method for 'rgeneric'
 #' @export
-mu.inla.rgeneric <- function(model, theta) {
+mu.rgeneric <- function(model, theta) {
   if(missing(theta)) {
     theta <- initial(model)
     warning(paste(
@@ -102,11 +114,11 @@ mu.inla.rgeneric <- function(model, theta) {
                 theta = theta)
   ))
 }
-#' @describeIn rgeneric
-#' The prior metho for 'inla.rgeneric'
+#' @describeIn rgeneric-class
+#' The prior metho for 'rgeneric'
 #' @param theta the parameter.
 #' @export
-prior.inla.rgeneric <- function(model, theta) {
+prior.rgeneric <- function(model, theta) {
   return(do.call(
     what = "inla.rgeneric.q",
     args = list(rmodel = model,
