@@ -57,35 +57,34 @@ cgeneric_get <- function(model,
                    several.ok = TRUE)
   stopifnot(length(cmd)>0)
 
-  if(missing(theta)) {
-    if(cmd %in% c("Q", "log_prior")) {
-      initheta <- .Call(
-        "inla_cgeneric_element_get",
-        "initial",
-        NULL,
-        as.integer(1),
-        cgdata$ints,
-        cgdata$doubles,
-        cgdata$characters,
-        cgdata$matrices,
-        cgdata$smatrices,
-        PACKAGE = "INLAtools"
-      )
-      if(length(initheta)>0) {
-        stop("Please provide 'theta'!")
-      }
-    } else {
-      theta <- NULL
-      ntheta = 0L
-    }
-  } else {
-    if(inherits(theta, "matrix")) {
-      ntheta <- as.integer(ncol(theta))
-    } else {
-      ntheta <- 1L
-    }
-    theta <- as.numeric(theta)
+  initheta <- try(.Call(
+    "inla_cgeneric_element_get",
+    "initial",
+    NULL,
+    as.integer(1),
+    cgdata$ints,
+    cgdata$doubles,
+    cgdata$characters,
+    cgdata$matrices,
+    cgdata$smatrices,
+    PACKAGE = "INLAtools"
+  ), silent = TRUE)
+
+  if(inherits(initheta, "try-error")) {
+    stop('Error trying to get "initial"!')
   }
+
+  if((length(cmd)==1) & (cmd=="inital")) {
+    return(initheta)
+  }
+
+  if(missing(theta)) {
+    warning('missing "theta", using "initial"!')
+    theta <- initheta
+  }
+
+  theta <- as.double(theta)
+  ntheta <- floor(length(theta)/length(initheta))
 
   if(length(cmd) == 1) {
     ret <- .Call(
@@ -225,7 +224,8 @@ graph.cgeneric <- function(model, optimize) {
 #' @export
 prec.cgeneric <- function(model, theta, optimize) {
   if(missing(theta)) {
-    theta <- NULL
+    warning('missing "theta", using "initial"!')
+    theta <- initial(model)
   }
   if(missing(optimize)) {
     optimize <- FALSE

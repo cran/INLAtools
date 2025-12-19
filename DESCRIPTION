@@ -1,7 +1,7 @@
 Package: INLAtools
 Type: Package
 Title: Functionalities for the 'INLA' Package
-Version: 0.0.5
+Version: 0.0.6
 Maintainer: Elias Teixeira Krainski <eliaskrainski@gmail.com>
 Authors@R: c(
  person(given = c("Elias"),
@@ -50,10 +50,10 @@ Depends: R (>= 4.3), Matrix, inlabru
 Imports: methods, utils
 Suggests: INLA (>= 25.10.28)
 BuildVignettes: true
-Packaged: 2025-11-20 07:01:43 UTC; eliask
+Packaged: 2025-12-19 10:10:54 UTC; eliask
 Author: Elias Teixeira Krainski [cre, aut, cph] (ORCID:
     <https://orcid.org/0000-0002-7063-2615>),
   Finn Lindgren [aut] (ORCID: <https://orcid.org/0000-0002-5833-2011>),
   Haavard Rue’ [aut] (ORCID: <https://orcid.org/0000-0002-0222-1881>)
 Repository: CRAN
-Date/Publication: 2025-11-20 10:20:25 UTC
+Date/Publication: 2025-12-19 11:00:09 UTC
