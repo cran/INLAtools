@@ -69,25 +69,34 @@ cgeneric_get <- function(model,
     cgdata$smatrices,
     PACKAGE = "INLAtools"
   ), silent = TRUE)
-
   if(inherits(initheta, "try-error")) {
     stop('Error trying to get "initial"!')
   }
-
-  if((length(cmd)==1) & (cmd=="inital")) {
+  if((length(cmd)==1) && (cmd=="initial")) {
     return(initheta)
   }
+  theta.size <- length(initheta)
 
-  if(missing(theta)) {
-    warning('missing "theta", using "initial"!')
-    theta <- initheta
+  needtheta <- any(cmd %in% c("Q", "log_prior"))
+  if(needtheta & (theta.size>0)) {
+    if(missing(theta)) {
+      warning('missing "theta", using "initial"!')
+      theta <- initheta
+    } else {
+      if(is.null(theta)) {
+        warning('missing "theta", using "initial"!')
+        theta <- initheta
+      }
+    }
+    theta <- as.double(theta)
+    ntheta <- floor(length(theta)/length(initheta))
+  } else {
+    theta <- NULL
+    ntheta <- 0L
   }
 
-  theta <- as.double(theta)
-  ntheta <- floor(length(theta)/length(initheta))
-
   if(length(cmd) == 1) {
-    ret <- .Call(
+    ret <- try(.Call(
       "inla_cgeneric_element_get",
       cmd,
       theta,
@@ -98,7 +107,10 @@ cgeneric_get <- function(model,
       cgdata$matrices,
       cgdata$smatrices,
       PACKAGE = "INLAtools"
-    )
+    ), silent = TRUE)
+    if(inherits(ret, "try-error")) {
+      stop('Error trying to get "', cmd, '"!')
+    }
 
     if((cmd %in% c("graph", "Q")) && (!optimize)) {
       if(cmd == "graph") {
@@ -241,55 +253,7 @@ prec.cgeneric <- function(model, theta, optimize) {
 #' for theta) or vector (if numeric matrix is provided
 #' for theta).
 #' @export
-#' @examples
-#'
-#' old.par <- par(no.readonly = TRUE)
-#'
-#' ## Setting the prior parameters
-#' prior.par <- c(1, 0.5) # P(sigma > 1) = 0.5
-#' cmodel <- cgeneric(
-#'   model = "iid", n = 10,
-#'   param = prior.par)
-#'
-#' ## prior summaries: sigma and log-precision
-#' (lamb <- -log(prior.par[2])/prior.par[1])
-#' (smedian <- qexp(0.5, lamb))
-#' (smean <- 1/lamb)
-#'
-#' ## mode: at the minimum of - log-prior
-#' (lpmode <- optimize(function(x)
-#'   -prior(cmodel, theta = x),
-#'   c(-10, 30))$minimum)
-#' ## mean: integral of x*f(x)dx
-#' (lpmean <- integrate(function(x)
-#'   exp(prior(cmodel, theta = matrix(x, 1)))*x,
-#'   -10, 30)$value)
-#'
-#' ## prior visualization: log(precision) and sigma
-#' par(mfrow = c(1, 2))
-#' plot(function(x)
-#'  exp(prior(cmodel, theta = matrix(x, nrow=1))),
-#'   -3, 3, n = 601, xlab = "log-precision",
-#'   ylab = "density")
-#' abline(v = lpmode, lwd = 3, col = 2)
-#' rug(-2*log(smedian), lwd = 3, col = 3)
-#' rug(lpmean, lwd = 3, col = 4)
-#' plot(function(x)
-#'  exp(prior(cmodel,
-#'   theta = matrix(
-#'     -2*log(x),
-#'     nrow = 1))+log(2)-log(x)),
-#'   1/100, 10, n = 1000,
-#'   xlab = expression(sigma),
-#'   ylab = "density")
-#' plot(function(x) dexp(x, lamb),
-#'    1/100, 10, n = 1000,
-#'    add = TRUE, lty = 2, col = 2)
-#' rug(smedian, lwd = 3, col = 3)
-#' rug(smean, lwd = 3, col = 4)
-#'
-#' par(old.par)
-#'
+#' @example demo/prior.R
 prior.cgeneric <- function(model, theta) {
   return(cgeneric_get(model = model,
                       cmd = "log_prior",

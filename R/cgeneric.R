@@ -44,8 +44,9 @@
 #'
 #'  The `cgeneric_shlib` function returns a `character`
 #'  with the path to the shared lib.
-#' @seealso [INLA::cgeneric()] and [methods()]
+#' @seealso [INLA::cgeneric()] and [INLAtools-methods()]
 #' @export
+#' @example demo/cgeneric.R
 cgeneric <- function(model, ...) {
   UseMethod("cgeneric")
 }
@@ -297,48 +298,61 @@ cgeneric_shlib <- function(
   }
   return(normalizePath(shlib))
 }
-#' Draw samples from hyperparameters of a `cgeneric`
-#' model component from an `inla` output, like
-#' `inla::inla.iidkd.sample()`.
-#' @param n integer as the sample size.
-#' @param result an `inla` output.
-#' @param name character with the name of the model
-#' component in the set of random effects.
-#' @param model a `cgeneric` model
-#' @param from.theta a function to convert from
-#' theta to the desired output for each sample.
-#' @param simplify logical (see ?sapply).
-#' @return matrix (if n>1 and length(from.theta)>1)
-#' or numeric vector otherwise.
-#' @seealso [prior.cgeneric()]
+#' @describeIn cgeneric-class
+#' Print the cgeneric object
+#' @param x a cgeneric object
+#' @param ... not used
 #' @export
-inla.cgeneric.sample <- function(n = 1e4, result, name,
-                                 model, from.theta,
-                                 simplify = FALSE) {
-  stopifnot(!missing(result))
-  stopifnot(inherits(result, "inla"))
-  stopifnot(!missing(name))
-  if(missing(model))
-    if(missing(from.theta))
-      stop("Please provide either 'model' or 'from.theta'!")
-  stopifnot(n > 0)
-  idx <- grep(name, names(result$mode$theta))
-  xx <- INLA::inla.hyperpar.sample(
-    n = n,
-    result = result,
-    intern = TRUE)[, idx, drop = FALSE]
-  if(missing(model)) {
-    result <- sapply(
-      1:n,
-      function(i) from.theta(xx[i,]),
-      simplify = simplify)
-  } else {
-    result <- sapply(1:n, function(i)
-      cgeneric_get(model = model,
-                   cmd = "Q",
-                   theta = xx[i, ]),
-      simplify = simplify
-    )
+print.cgeneric <- function(x, ...) {
+  cat("cgeneric: ", x$f$cgeneric$model, ", n = ",
+      x$f$cgeneric$n, ", shlib:\n", sep = "")
+  cat(x$f$cgeneric$data$characters$shlib, "\n")
+  d0 <- c(2L, 0L, 2L, 0, 0)
+  dn <- sapply(x$f$cgeneric$data, length)
+  dn0 <- dn-d0
+  ii <- which(dn0>0)
+  if(length(ii)>0) {
+    nd <- names(dn)
+    for(i in ii){
+      d <- x$f$cgeneric$data[[i]]
+      ndi <- names(d)
+      jj <- (d0[i]+1):dn[i]
+      cat(nd[i], " (", dn[i], ") : ", sep = "")
+      if(i %in% c(1,2,3)) {
+        cat(paste(ndi[jj], "(", sapply(d[jj], length),
+                  ") ", sep = ""), "\n")
+      } else {
+        if(i==4) {
+          dj <- sapply(d[jj], function(x) x[1:2])
+          cat(paste(ndi[jj], "(", dj[1,], ",", dj[2, ],
+                    ") ", sep = ""), "\n")
+        }
+        if(i==5) {
+          dj <- sapply(d[jj], function(x) x[1:3])
+          cat(paste(ndi[jj], "(", dj[1,], ",",
+                    dj[2, ], ",", dj[3,],
+                    ") ", sep = ""), "\n")
+        }
+      }
+    }
   }
-  return(result)
+}
+#' @describeIn cgeneric-class
+#' A summary for a cgeneric object
+#' @param object a cgeneric object
+#' @param ... not used
+#' @export
+summary.cgeneric <- function(object, ...) {
+  g <- graph(object)
+  cat("n = ", object$f$cgeneric$n, ", graph with",
+      length(g@x), "non-zeros\n", sep = "")
+}
+#' @describeIn cgeneric-class
+#' A plot for a cgeneric object
+#' @param y not used
+#' @importFrom graphics image
+#' @export
+plot.cgeneric <- function(x, y, ...) {
+  g <- graph(x)
+  image(g)
 }

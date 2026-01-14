@@ -10,6 +10,9 @@
 \alias{cgeneric.inla.cgeneric}
 \alias{cgenericBuilder}
 \alias{cgeneric_shlib}
+\alias{print.cgeneric}
+\alias{summary.cgeneric}
+\alias{plot.cgeneric}
 \title{Organize data for the latent GMRF C interface for \code{INLA}.}
 \usage{
 cgeneric(model, ...)
@@ -25,23 +28,19 @@ cgeneric(model, ...)
 cgenericBuilder(...)
 
 cgeneric_shlib(debug, package, useINLAprecomp)
+
+\method{print}{cgeneric}(x, ...)
+
+\method{summary}{cgeneric}(object, ...)
+
+\method{plot}{cgeneric}(x, y, ...)
 }
 \arguments{
 \item{model}{object class for what a \code{cgeneric} method exists.
 E.g., if it is a character, a specific function will be called.
 E.g. cgeneric("iid", ...") calls cgeneric_iid(...).}
 
-\item{...}{arguments passed from the
-\code{\link[=cgeneric]{cgeneric()}} methods. FIt should include
-\code{n} and \code{debug}. For \code{cgenericBuild} it should
-\code{model} as a character string with the name of the
-C function and \code{shlib} as the path to the
-shared object containing such function.
-If \code{shlib} is not provided it can be built
-using \code{inla_shlib} from the arguments,
-\code{package} (character with the R package containing it),
-\code{useINLAprecomp} (logical to indicate if \code{INLA} contains it
-and to use it).}
+\item{...}{not used}
 
 \item{debug}{integer, used as verbose in debug.}
 
@@ -50,6 +49,12 @@ that contains the \code{cgeneric} model.}
 
 \item{useINLAprecomp}{logical, indicating if it is to use
 the shared object previously copied and compiled by INLA.}
+
+\item{x}{a cgeneric object}
+
+\item{object}{a cgeneric object}
+
+\item{y}{not used}
 }
 \value{
 a method to build a \code{cgeneric} should return
@@ -104,12 +109,36 @@ whose order shall follow the graph definition.
 
 \item \code{cgeneric(inla.cgeneric)}: Converts a regular \code{inla.cgeneric} object to \code{cgeneric}.
 
+\item \code{print(cgeneric)}: Print the cgeneric object
+
+\item \code{summary(cgeneric)}: A summary for a cgeneric object
+
+\item \code{plot(cgeneric)}: A plot for a cgeneric object
+
 }}
 \note{
 The \code{graph} and \code{Q} non-zero pattern should match,
 its elements should be ordered by row,
 and only its upper part stored.
 }
+\examples{
+library(INLAtools)
+
+R <- Sparse(crossprod(diff(diag(10))))
+R
+
+m <- cgeneric("generic0", R = R,
+	      scale = FALSE,
+	      param = c(1, 0.01))
+m
+
+all.equal(R, Sparse(prec(m, theta = 0)))
+
+graph(m)
+prior(m, theta = 0)
+prior(m, theta = matrix(-1:1, 1)) ## see ?prior.cgeneric
+
+}
 \seealso{
-\code{\link[INLA:cgeneric]{INLA::cgeneric()}} and \code{\link[=methods]{methods()}}
+\code{\link[INLA:cgeneric]{INLA::cgeneric()}} and \code{\link[=INLAtools-methods]{INLAtools-methods()}}
 }
