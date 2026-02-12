@@ -1,7 +1,7 @@
 Package: INLAtools
 Type: Package
 Title: Functionalities for the 'INLA' Package
-Version: 0.0.8
+Version: 0.0.9
 Maintainer: Elias Teixeira Krainski <eliaskrainski@gmail.com>
 Authors@R: c(
  person(given = c("Elias"),
@@ -41,18 +41,17 @@ Description: Contain code to work with a C struct, in short
   models for what the needed constraints are automatically set.
 URL: https://github.com/eliaskrainski/INLAtools
 BugReports: https://github.com/eliaskrainski/INLAtools/issues
-Additional_repositories: https://inla.r-inla-download.org/R/testing
 License: GPL (>= 2)
 Encoding: UTF-8
 RoxygenNote: 7.3.3
 NeedsCompilation: yes
 Depends: R (>= 4.3), Matrix
 Imports: methods, utils
-Suggests: ggplot2, INLA (>= 25.12.16)
-Packaged: 2026-02-01 14:38:56 UTC; eliask
+Suggests: ggplot2
+Packaged: 2026-02-12 13:59:37 UTC; eliask
 Author: Elias Teixeira Krainski [cre, aut, cph] (ORCID:
     <https://orcid.org/0000-0002-7063-2615>),
   Finn Lindgren [aut] (ORCID: <https://orcid.org/0000-0002-5833-2011>),
   Haavard Rue’ [aut] (ORCID: <https://orcid.org/0000-0002-0222-1881>)
 Repository: CRAN
-Date/Publication: 2026-02-02 06:31:16 UTC
+Date/Publication: 2026-02-12 14:30:02 UTC
