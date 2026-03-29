@@ -1,7 +1,7 @@
 Package: INLAtools
 Type: Package
 Title: Functionalities for the 'INLA' Package
-Version: 0.0.9
+Version: 0.1.0
 Maintainer: Elias Teixeira Krainski <eliaskrainski@gmail.com>
 Authors@R: c(
  person(given = c("Elias"),
@@ -48,10 +48,10 @@ NeedsCompilation: yes
 Depends: R (>= 4.3), Matrix
 Imports: methods, utils
 Suggests: ggplot2
-Packaged: 2026-02-12 13:59:37 UTC; eliask
+Packaged: 2026-03-29 06:57:58 UTC; eliask
 Author: Elias Teixeira Krainski [cre, aut, cph] (ORCID:
     <https://orcid.org/0000-0002-7063-2615>),
   Finn Lindgren [aut] (ORCID: <https://orcid.org/0000-0002-5833-2011>),
   Haavard Rue’ [aut] (ORCID: <https://orcid.org/0000-0002-0222-1881>)
 Repository: CRAN
-Date/Publication: 2026-02-12 14:30:02 UTC
+Date/Publication: 2026-03-29 07:20:02 UTC

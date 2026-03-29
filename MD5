@@ -1,9 +1,9 @@
-2456ad76f070c84a01da142a965dd92e *DESCRIPTION
+1d7c2a78c64966220e405c0944eaf38b *DESCRIPTION
 6586740c3bcfb403f961f2643b639089 *NAMESPACE
 26cfd6229dddf933abe778887a365d99 *R/Matrix.R
 0f830ddd4e26bdeda16a8778d3c4beb1 *R/aaa_classes.R
-98fba4cd578f4e62be6a23297c3e8ea4 *R/aaa_methods.R
-d6dd0dd2ab4e9927129bab749f32d5e9 *R/cgeneric.R
+e9a06f8ecdeda56140fb5c52b15d819d *R/aaa_methods.R
+73584b6f06c6613fbcb8d78b99d139ea *R/cgeneric.R
 9820764a369d86fcc6b9c2c99d81c5bb *R/cgeneric_generic0.R
 c5cdbddbc250479a4fa3739e30f93a84 *R/cgeneric_utils.R
 225710b48158aa5d935d215f5e5e161e *R/inla_methods.R
@@ -38,4 +38,4 @@ cdc2342fdec9334c2e4d718319909427 *src/INLAtools_init.c
 5ebbc72688a5cdf80ba19c876aab30e5 *src/cgeneric.h
 2736fa38a7b1afadb4e459435eab05a2 *src/cgeneric_generic0.c
 150e652cdc31fa213237d74796e0d472 *src/cgeneric_get.c
-d914a8aab2c6015ccfa9c71a5349aa06 *src/cgeneric_kronecker.c
+eec26003ac89eb23d58bc6166c4f11c8 *src/cgeneric_kronecker.c
