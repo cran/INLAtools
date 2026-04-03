@@ -15,7 +15,7 @@ rgeneric_get(
   model,
   cmd = c("graph", "Q", "initial", "mu", "log_prior"),
   theta,
-  optimize = TRUE
+  ...
 )
 
 \method{initial}{rgeneric}(model)
@@ -35,6 +35,12 @@ rgeneric_get(
 
 \item{theta}{numeric vector with the model parameters.
 If missing, the \code{\link[=initial]{initial()}} will be used.}
+
+\item{...}{additional arguments passed on to methods.
+E.g.: \code{optimize = FALSE} return the graph and precision
+as a sparse matrix whereas \code{optimize = TRUE} retur the
+graph as arow/col indexes and the precision as a numeric
+vector with its elements.}
 
 \item{optimize}{logical indicating if it is to be
 returned only the elements and not as a sparse matrix.}

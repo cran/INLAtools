@@ -263,16 +263,19 @@ mapper1 <- function(model) {
   return(mapper)
 }
 #' @rdname cgeneric-class
-#' @param debug integer, used as verbose in debug.
-#' @param useINLAprecomp logical, indicating if it is to use
-#' the shared object previously copied and compiled by INLA.
 #' @param package character giving the name of the package
 #' that contains the `cgeneric` model.
+#' @param useINLAprecomp logical, indicating if it is to use
+#' the shared object previously copied and compiled by INLA.
+#' @param debug integer, used as verbose in debug.
 #' @export
+#' @examples
+#' cgeneric_shlib(package = "INLAtools", useINLAprecomp = FALSE)
+#'
 cgeneric_shlib <- function(
-    debug,
     package,
-    useINLAprecomp) {
+    useINLAprecomp,
+    debug) {
 
   if(missing(package) || is.null(package)) {
     stop("please provide package!")
@@ -291,17 +294,15 @@ cgeneric_shlib <- function(
   nbit <- 8 * (.Machine$sizeof.pointer)
   if(useINLAprecomp) {
     OS <- .Platform$OS.type
+    OSb <- paste0(OS, "/", nbit, "bit/")
     if(OS=="unix") {
       OSb <- paste0("linux/", nbit, "bit/")
       if(!is.na(file.info("/Library")$isdir)) {
         OSb <- paste0("mac/", nbit, "bit/")
-      } else {
-        if(Sys.info()[["machine"]] == "arm64") {
-          OSb <- "mac.arm64/"
-        }
       }
-    } else {
-      OSb <- paste0(OS, "/", nbit, "bit/")
+      if(Sys.info()[["machine"]] == "arm64") {
+        OSb <- paste0("mac.arm64/", nbit, "bit/")
+      }
     }
     shlib <- paste0(
       find.package("INLA"), "/bin/", OSb,
@@ -312,8 +313,8 @@ cgeneric_shlib <- function(
           shlib, "\n")
     }
   } else {
-    shlib <- system.file("libs",
-                         package = package)
+    shlib <- paste0(find.package(package = package),
+                    "/libs/")
     if (Sys.info()["sysname"] == "Windows") {
       shlib <- file.path(
         shlib,

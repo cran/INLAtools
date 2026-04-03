@@ -9,34 +9,46 @@
 #' @param cmd an string to specify which model element to get
 #' @param theta numeric vector with the model parameters.
 #' If missing, the [initial()] will be used.
-#' @param optimize logical. If missing or FALSE,
-#' the graph and precision are as a sparse matrix.
-#' If TRUE, graph only return the row/col indexes and
-#' precision return only the elements as a vector.
+#' @param ... additional arguments passed on to methods.
+#' E.g.: `optimize = FALSE` return the graph and precision
+#' as a sparse matrix whereas `optimize = TRUE` retur the
+#' graph as arow/col indexes and the precision as a numeric
+#' vector with its elements.
 #' @return depends on `cmd`
 rgeneric_get <- function(model,
                          cmd = c("graph", "Q", "initial", "mu", "log_prior"),
                          theta,
-                         optimize = TRUE) {
+                         ...) {
 
   ## internal function to
   ## re-implement INLA::inla.rgeneric.q
   ## to be accessed by rgeneric INLAtools methods
 
   ret <- NULL
-  cmd[cmd == "log.prior"] <- "log_prior"
+  cmd[cmd == "log_prior"] <- "log.prior"
   cmd <- unique(cmd)
-  cmds <- c("graph", "Q", "initial", "mu", "log_prior")
+  cmds <- c("graph", "Q", "initial", "mu", "log.prior")
   cmd <- match.arg(cmd,
                    cmds,
                    several.ok = TRUE)
   stopifnot(length(cmd)>0)
 
+  optimize <- list(...)$optimize
+  if(is.null(optimize))
+    optimize <- FALSE
+
   func <- model$f$rgeneric$definition
-  initheta <- try(do.call(
-    what = func,
-    args = list(cmd = "initial", theta = NULL)
-  ), silent = TRUE)
+
+  if(length(cmd) == 1) {
+    if(cmd == "graph") {
+      return(try(func("graph"), silent = TRUE))
+    }
+    if(cmd == "mu") {
+      return(try(func("mu"), silent = TRUE))
+    }
+  }
+
+  initheta <- try(func("initial"), silent = TRUE)
 
   if(inherits(initheta, "try-error")) {
     stop('Error trying to get "initial"!')
@@ -46,38 +58,34 @@ rgeneric_get <- function(model,
   }
   theta.size <- length(initheta)
 
-  needtheta <- any(cmd %in% c("Q", "log_prior"))
+  needtheta <- any(cmd %in% c("Q", "log.prior"))
   if(needtheta & (theta.size>0)) {
-    if(missing(theta)) {
+    if(missing(theta) || is.null(theta)) {
       warning('missing "theta", using "initial"!')
       theta <- initheta
-    } else {
-      if(is.null(theta)) {
-        warning('missing "theta", using "initial"!')
-        theta <- initheta
-      }
     }
     theta <- as.double(theta)
     ntheta <- floor(length(theta)/length(initheta))
 
     ## if more than one theta is given
-    if((ntheta>1) && (length(cmd)==1) && (cmd=="log_prior")) {
-      theta <- matrix(theta, nrow = length(initheta))
-      return(sapply(1:ncol(theta), function(j) {
-        rgeneric_get(model, cmd = "initial", theta = theta[, j])
-      }))
+    if((length(cmd)==1) && (cmd=="log.prior")) {
+      if(ntheta==1) {
+        return(func("log.prior", theta = theta))
+      } else {
+        theta <- matrix(theta, nrow = theta.size)
+        return(sapply(1:ncol(theta), function(j) {
+          func("log.prior", theta = theta[, j])
+        }))
+      }
     }
-
   } else {
     theta <- NULL
     ntheta <- 0L
   }
 
   if(length(cmd) == 1) {
-    ret <- try(do.call(
-      what = func,
-      args = list(cmd = cmd, theta = theta)
-    ), silent = TRUE)
+    ret <- try(func(cmd = cmd, theta = theta),
+               silent = TRUE)
     if(inherits(ret, "try-error")) {
       stop('Error trying to get "', cmd, '"!')
     }
@@ -93,8 +101,7 @@ rgeneric_get <- function(model,
   } else {
     names(cmd) <- cmd
     ret <- lapply(cmd, function(x) {
-      try(do.call(what = func,
-                  args = list(cmd = cmd, theta = theta)),
+      try(func(cmd = x, theta = theta),
           silent = TRUE)
     })
     if(optimize) {
