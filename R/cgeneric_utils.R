@@ -70,7 +70,32 @@ cgeneric_get <- function(model,
     PACKAGE = "INLAtools"
   ), silent = TRUE)
   if(inherits(initheta, "try-error")) {
-    stop('Error trying to get "initial"!')
+    ## workaround: try useINLAprecomp = FALSE
+    sshlib <- strsplit(cgdata$characters$shlib, "/")[[1]]
+    lpkg <- utils::tail(sshlib, 2)[1]
+    cgdata$characters$shlib <-
+      cgeneric_shlib(package = lpkg,
+                     useINLAprecomp = FALSE)
+    print(initheta)
+    print(str(cgdata))
+    warning(paste("Changed shlib to\n",
+                  cgdata$characters$shlib))
+    initheta <- try(.Call(
+      "inla_cgeneric_element_get",
+      "initial",
+      NULL,
+      as.integer(1),
+      cgdata$ints,
+      cgdata$doubles,
+      cgdata$characters,
+      cgdata$matrices,
+      cgdata$smatrices,
+      PACKAGE = "INLAtools"
+    ), silent = TRUE)
+    if(inherits(initheta, "try-error")) {
+      print(initheta)
+      stop('Error trying to get "initial"!')
+    }
   }
   if((length(cmd)==1) && (cmd=="initial")) {
     return(initheta)
