@@ -91,3 +91,29 @@ findGetFunction <- function(fName, package, debug = FALSE) {
   attr(efn, "package") <- pkgFound
   return(efn)
 }
+#' Internal: to append path for INLA binary files.
+#' @noRd
+apINLAbin <- function() {
+  nbit <- paste0(as.integer(8 * (.Machine$sizeof.pointer)),
+                 "bit/")
+  OS <- .Platform$OS.type
+  if(OS=="windows") {
+    b <- paste0("windows/", nbit)
+  } else {
+    if(OS=="unix") {
+      if((!is.na(file.info("/Library")$isdir)) &&
+         (!is.na(file.info("/Applications")$isdir))) {
+        if(Sys.info()[["machine"]] == "arm64") {
+          b <- paste0("mac.arm64/", nbit)
+        } else {
+          b <- paste0("mac/", nbit)
+        }
+      } else {
+        b <- paste0("linux/", nbit)
+      }
+    } else {
+      stop("Unknown OS type!")
+    }
+  }
+  return(b)
+}

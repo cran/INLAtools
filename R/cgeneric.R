@@ -66,7 +66,6 @@ cgeneric <- function(model, ...) {
 #'  and to use it). When using the inlabru package,
 #'  one can also provide a `mapper` which will be evaluated by
 #'  the bru_get_mapper inlabru's function.
-#' @importFrom methods is
 #' @export
 cgeneric.character <- function(
     model,
@@ -291,26 +290,13 @@ cgeneric_shlib <- function(
       }
   }
 
-  nbit <- 8 * (.Machine$sizeof.pointer)
+  nbit <- as.integer(8 * (.Machine$sizeof.pointer))
   if(useINLAprecomp) {
-    OS <- .Platform$OS.type
-    OSb <- paste0(OS, "/", nbit, "bit/")
-    if(OS=="unix") {
-      OSb <- paste0("linux/", nbit, "bit/")
-      if(!is.na(file.info("/Library")$isdir)) {
-        OSb <- paste0("mac/", nbit, "bit/")
-      }
-      if(Sys.info()[["machine"]] == "arm64") {
-        OSb <- paste0("mac.arm64/", nbit, "bit/")
-      }
-    }
     shlib <- paste0(
-      find.package("INLA"), "/bin/", OSb,
-      "external/", package,
-      "/lib", package, ".so")
+      find.package("INLA"), "/bin/", apINLAbin(),
+      "external/", package, "/lib", package, ".so")
     if(debug) {
-      cat("INLA compiled shared lib at:\n",
-          shlib, "\n")
+      cat("INLA compiled shared lib at:\n", shlib, "\n")
     }
   } else {
     shlib <- paste0(find.package(package = package),
@@ -382,7 +368,6 @@ summary.cgeneric <- function(object, ...) {
 #' @describeIn cgeneric-class
 #' A plot for a cgeneric object
 #' @param y not used
-#' @importFrom graphics image
 #' @export
 plot.cgeneric <- function(x, y, ...) {
   g <- graph(x)
