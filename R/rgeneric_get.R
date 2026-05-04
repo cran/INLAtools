@@ -1,6 +1,5 @@
-#' `rgeneric_get` is an internal function used by
-#' `graph`, `pred`, `initial`, `mu` or `prior`
-#' methods for `rgeneric`.
+#' `rgeneric_get` is an internal function used to query
+#' `graph`, `Q`, `initial`, `mu` or `prior` from a `rgeneric`.
 #' @description
 #' The `generic_get` retrieve a model property specified by
 #' `cmd` on an `rgeneric` object.
@@ -8,7 +7,7 @@
 #' @param model a `rgeneric` object.
 #' @param cmd an string to specify which model element to get
 #' @param theta numeric vector with the model parameters.
-#' If missing, the [initial()] will be used.
+#' If missing, the `initial` will be used.
 #' @param ... additional arguments passed on to methods.
 #' E.g.: `optimize = FALSE` return the graph and precision
 #' as a sparse matrix whereas `optimize = TRUE` retur the
@@ -122,13 +121,13 @@ rgeneric_get <- function(model,
 #' @describeIn rgeneric_get
 #' Retrive the initial parameter(s) of an `rgeneric` model.
 #' @export
-initial.rgeneric <- function(model) {
+rgeneric_initial <- function(model) {
   rgeneric_get(model, "initial")
 }
 #' @describeIn rgeneric_get
 #' Evaluate the mean for an `rgeneric` model.
 #' @export
-mu.rgeneric <- function(model, theta) {
+rgeneric_mu <- function(model, theta) {
   rgeneric_get(model, "mu", theta = theta)
 }
 #' @describeIn rgeneric_get
@@ -136,7 +135,7 @@ mu.rgeneric <- function(model, theta) {
 #' @param optimize logical indicating if it is to be
 #' returned only the elements and not as a sparse matrix.
 #' @export
-graph.rgeneric <- function(model, optimize) {
+rgeneric_graph <- function(model, optimize) {
   if(missing(optimize)) {
     optimize <- FALSE
   }
@@ -147,11 +146,7 @@ graph.rgeneric <- function(model, optimize) {
 #' @describeIn rgeneric_get
 #' Retrieve the precision of an `rgeneric` object
 #' @export
-prec.rgeneric <- function(model, theta, optimize) {
-  if(missing(theta)) {
-    warning('missing "theta", using "initial"!')
-    theta <- initial(model)
-  }
+rgeneric_Q <- function(model, theta, optimize) {
   if(missing(optimize)) {
     optimize <- FALSE
   }
@@ -167,7 +162,7 @@ prec.rgeneric <- function(model, theta, optimize) {
 #' for theta).
 #' @export
 #' @example demo/prior.R
-prior.rgeneric <- function(model, theta) {
+rgeneric_prior <- function(model, theta) {
   return(rgeneric_get(model = model,
                       cmd = "log_prior",
                       theta = theta))

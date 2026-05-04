@@ -10,7 +10,7 @@
 \alias{cgeneric.inla.cgeneric}
 \alias{cgenericBuilder}
 \alias{mapper1}
-\alias{cgeneric_shlib}
+\alias{cgeneric_shlib_path}
 \alias{print.cgeneric}
 \alias{summary.cgeneric}
 \alias{plot.cgeneric}
@@ -30,7 +30,7 @@ cgenericBuilder(...)
 
 mapper1(model)
 
-cgeneric_shlib(package, useINLAprecomp, debug)
+cgeneric_shlib_path(package, useINLAprecomp, debug)
 
 \method{print}{cgeneric}(x, ...)
 
@@ -40,10 +40,23 @@ cgeneric_shlib(package, useINLAprecomp, debug)
 }
 \arguments{
 \item{model}{object class for what a \code{cgeneric} method exists.
-E.g., if it is a character, a specific function will be called.
-E.g. cgeneric("iid", ...") calls cgeneric_iid(...).}
+if it is a character, a specific function will be called,
+for example cgeneric("iid", ...") calls cgeneric_iid(...).}
 
-\item{...}{not used}
+\item{...}{additional arguments passed on to methods
+It should include
+\code{n} and \code{debug}. For \code{cgenericBuild} and
+\code{model} as a character string with the name of the
+C function and \code{shlib} as the path to the
+shared object containing such function.
+If \code{shlib} is not provided it can be built
+using \code{cgeneric_shlib_path} for the
+\code{package} (character with the R package containing it),
+in which \code{useINLAprecomp} (logical) indicates if it is to
+use the one contained within \code{INLA} or in the package.
+When using the inlabru package,
+one can also provide a \code{mapper} which will be evaluated by
+the bru_get_mapper inlabru's function.}
 
 \item{package}{character giving the name of the package
 that contains the \code{cgeneric} model.}
@@ -75,7 +88,7 @@ and \code{smatrices}.
 \code{n} times \code{k} matrix and \code{e} as a length \code{k} vector.
 }
 
-The \code{cgeneric_shlib} function returns a \code{character}
+The \code{cgeneric_shlib_path} function returns a \code{character}
 with the path to the shared lib.
 }
 \description{
@@ -107,11 +120,19 @@ whose order shall follow the graph definition.
 }
 \section{Functions}{
 \itemize{
-\item \code{cgeneric(cgeneric)}: Returns the model object unchanged.
+\item \code{cgeneric(character)}: Call a function named as \code{cgeneric_[model]} to build a \code{cgeneric}.
 
-\item \code{cgeneric(inla.cgeneric)}: Converts a regular \code{inla.cgeneric} object to \code{cgeneric}.
+\item \code{cgeneric(`function`)}: The \code{cgeneric} method for function.
+
+\item \code{cgeneric(cgeneric)}: Check, append \code{cgeneric} class, returns model unchanged.
+
+\item \code{cgeneric(inla.cgeneric)}: Check and converts a regular \code{inla.cgeneric} object to \code{cgeneric}.
+
+\item \code{cgenericBuilder()}: Build a \code{cgeneric} from a list of arguments.
 
 \item \code{mapper1()}: A default mapper for a cgeneric/rgeneric model
+
+\item \code{cgeneric_shlib_path()}: Make the lib path for the shared lib of a package.
 
 \item \code{print(cgeneric)}: Print the cgeneric object
 
@@ -124,27 +145,4 @@ whose order shall follow the graph definition.
 The \code{graph} and \code{Q} non-zero pattern should match,
 its elements should be ordered by row,
 and only its upper part stored.
-}
-\examples{
-library(INLAtools)
-
-R <- Sparse(crossprod(diff(diag(10))))
-R
-
-m <- cgeneric("generic0", R = R,
-	      scale = FALSE,
-	      param = c(1, 0.01))
-m
-
-all.equal(R, Sparse(prec(m, theta = 0)))
-
-graph(m)
-prior(m, theta = 0)
-prior(m, theta = matrix(-1:1, 1)) ## see ?prior.cgeneric
-
-cgeneric_shlib(package = "INLAtools", useINLAprecomp = FALSE)
-
-}
-\seealso{
-\code{\link[=INLAtools-methods]{INLAtools-methods()}}
 }

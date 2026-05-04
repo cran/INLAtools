@@ -1,6 +1,6 @@
-#' `cgeneric_get` is an internal function used by
-#' `graph`, `pred`, `initial`, `mu` or `prior`
-#' methods for `cgeneric`.
+#' `cgeneric_get` is an internal function used to query
+#' `graph`, `Q`, `initial`, `mu` or `log_prior` from a
+#' `cgeneric` model.
 #' @description
 #' The `generic_get` retrieve a model property specified by
 #' `cmd` on an `cgeneric` object.
@@ -8,12 +8,11 @@
 #' @param model a `cgeneric` object.
 #' @param cmd an string to specify which model element to get
 #' @param theta numeric vector with the model parameters.
-#' If missing, the [initial()] will be used.
+#' If missing, the `initial` will be used.
 #' @param optimize logical. If missing or FALSE,
 #' the graph and precision are as a sparse matrix.
 #' If TRUE, graph only return the row/col indexes and
 #' precision return only the elements as a vector.
-#' @useDynLib INLAtools
 #' @return depends on `cmd`
 #' @seealso check the examples in [cgeneric_generic0()]
 cgeneric_get <- function(model,
@@ -79,10 +78,10 @@ cgeneric_get <- function(model,
     ## Note: cgeneric Kronecker not considered
     sshlib <- strsplit(cgdata$characters$shlib, "/")[[1]]
     lpkg <- utils::tail(sshlib, 2)[1]
-    ish <- cgeneric_shlib(
+    ish <- cgeneric_shlib_path(
       package = lpkg,
       useINLAprecomp = FALSE)
-    psh <- cgeneric_shlib(
+    psh <- cgeneric_shlib_path(
       package = lpkg,
       useINLAprecomp = FALSE)
     if(cgdata$characters$shlib == ish) {
@@ -215,7 +214,7 @@ cgeneric_get <- function(model,
   if(any(cmd == "Q")) {
     if(any(cmd == "graph")) {
       ret$Q <- ret$graph <- ij2Q(ret$graph, ret$Q)
-      ret$graph@x <- rep(1L, length(graph@x))
+      ret$graph@x <- rep(1L, length(ret$graph@x))
     } else {
       ret$Q <- ij2Q(
         .Call(
@@ -241,13 +240,13 @@ cgeneric_get <- function(model,
 #' @describeIn cgeneric_get
 #' Retrive the initial parameter(s) of an `cgeneric` model.
 #' @export
-initial.cgeneric <- function(model) {
+cgeneric_initial <- function(model) {
   cgeneric_get(model, "initial")
 }
 #' @describeIn cgeneric_get
 #' Evaluate the mean for an `cgeneric` model.
 #' @export
-mu.cgeneric <- function(model, theta) {
+cgeneric_mu <- function(model, theta) {
   cgeneric_get(model, "mu", theta = theta)
 }
 #' @describeIn cgeneric_get
@@ -255,7 +254,7 @@ mu.cgeneric <- function(model, theta) {
 #' @param optimize logical indicating if it is to be
 #' returned only the elements and not as a sparse matrix.
 #' @export
-graph.cgeneric <- function(model, optimize) {
+cgeneric_graph <- function(model, optimize) {
   if(missing(optimize)) {
     optimize <- FALSE
   }
@@ -266,11 +265,7 @@ graph.cgeneric <- function(model, optimize) {
 #' @describeIn cgeneric_get
 #' Retrieve the precision of an `cgeneric` object
 #' @export
-prec.cgeneric <- function(model, theta, optimize) {
-  if(missing(theta)) {
-    warning('missing "theta", using "initial"!')
-    theta <- initial(model)
-  }
+cgeneric_Q <- function(model, theta, optimize) {
   if(missing(optimize)) {
     optimize <- FALSE
   }
@@ -286,7 +281,7 @@ prec.cgeneric <- function(model, theta, optimize) {
 #' for theta).
 #' @export
 #' @example demo/prior.R
-prior.cgeneric <- function(model, theta) {
+cgeneric_prior <- function(model, theta) {
   return(cgeneric_get(model = model,
                       cmd = "log_prior",
                       theta = theta))

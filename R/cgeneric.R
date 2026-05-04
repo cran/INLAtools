@@ -19,15 +19,27 @@
 #'    * remaining elements should be the initials for the model parameters.
 #'  * `log.norm.const` log of the normalizing constant.
 #'  * `log.prior` log of the prior for the model parameters.
+#' @param model object class for what a `cgeneric` method exists.
+#' if it is a character, a specific function will be called,
+#' for example cgeneric("iid", ...") calls cgeneric_iid(...).
+#' @param ... additional arguments passed on to methods
+#' It should include
+#' `n` and `debug`. For `cgenericBuild` and
+#'  `model` as a character string with the name of the
+#'  C function and `shlib` as the path to the
+#'  shared object containing such function.
+#'  If `shlib` is not provided it can be built
+#'  using `cgeneric_shlib_path` for the
+#'  `package` (character with the R package containing it),
+#'  in which `useINLAprecomp` (logical) indicates if it is to
+#'  use the one contained within `INLA` or in the package.
+#'  When using the inlabru package,
+#'  one can also provide a `mapper` which will be evaluated by
+#'  the bru_get_mapper inlabru's function.
 #' @note
 #' The `graph` and `Q` non-zero pattern should match,
 #' its elements should be ordered by row,
 #'and only its upper part stored.
-#' @param model object class for what a `cgeneric` method exists.
-#' if it is a character, a specific function will be called,
-#' for example cgeneric("iid", ...") calls cgeneric_iid(...),
-#' see [cgeneric_iid()] and [cgeneric_generic0()].
-#' @param ... additional arguments passed on to methods
 #' @returns a method to build a `cgeneric` should return
 #' a named list of `cgeneric` class that contains a
 #'  named list `f` that contains (at least):
@@ -41,31 +53,18 @@
 #'  * (possible) `extraconstr` as a named list with: `A` as a
 #'   `n` times `k` matrix and `e` as a length `k` vector.
 #'
-#'  The `cgeneric_shlib` function returns a `character`
+#'  The `cgeneric_shlib_path` function returns a `character`
 #'  with the path to the shared lib.
-#' @seealso [INLAtools-methods()]
 #' @export
-#' @example demo/cgeneric.R
+#' @examples
+#' cg <- cgeneric("iid", n = 10, param = c(1, 0.05))
+#' cg
 cgeneric <- function(model, ...) {
   UseMethod("cgeneric")
 }
-#' @rdname cgeneric-class
-#' @param model object class for what a `cgeneric` method exists.
-#' E.g., if it is a character, a specific function will be called.
-#' E.g. cgeneric("iid", ...") calls cgeneric_iid(...).
-#' @param ... arguments passed from the
-#' [cgeneric()] methods. FIt should include
-#' `n` and `debug`. For `cgenericBuild` it should
-#'  `model` as a character string with the name of the
-#'  C function and `shlib` as the path to the
-#'  shared object containing such function.
-#'  If `shlib` is not provided it can be built
-#'  using `inla_shlib` from the arguments,
-#'  `package` (character with the R package containing it),
-#'  `useINLAprecomp` (logical to indicate if `INLA` contains it
-#'  and to use it). When using the inlabru package,
-#'  one can also provide a `mapper` which will be evaluated by
-#'  the bru_get_mapper inlabru's function.
+
+#' @describeIn cgeneric-class
+#' Call a function named as `cgeneric_[model]` to build a `cgeneric`.
 #' @export
 cgeneric.character <- function(
     model,
@@ -108,9 +107,10 @@ cgeneric.character <- function(
       }
     }
   }
-
 }
-#' @rdname cgeneric-class
+
+#' @describeIn cgeneric-class
+#' The `cgeneric` method for function.
 #' @export
 cgeneric.function <- function(
     model,
@@ -122,25 +122,30 @@ cgeneric.function <- function(
   return(out)
 }
 
-
-#' @describeIn cgeneric-class Returns the model object unchanged.
+#' @describeIn cgeneric-class
+#' Check, append `cgeneric` class, returns model unchanged.
 #' @export
 cgeneric.cgeneric <- function(model, ...) {
   return(model)
 }
 
-#' @describeIn cgeneric-class Converts a regular `inla.cgeneric` object to `cgeneric`.
+#' @describeIn cgeneric
+#' Check and converts a regular `inla.cgeneric` object to `cgeneric`.
 #' @export
 cgeneric.inla.cgeneric <- function(model, ...) {
-  # TODO: Is it enough to just add the "cgeneric" class name, or does the object need to be
-  # regenerated/modified as well?
-  warning("TODO: check whether basic inla.cgeneric objects fulfil the assumptions of the cgeneric class")
+  stopifnot(!c("f") %in% names(model))
+  stopifnot(!all(c("model", "n", "cgeneric") %in% names(model$f)))
+  stopifnot(!c("data") %in% names(model$f$cgeneric))
+  stopifnot(!all(c("ints", "characters") %in% names(model$f$cgeneric)))
+  stopifnot(!all(c("n") %in% names(model$f$cgeneric$data$ints)))
+  stopifnot(!all(c("shlib") %in% names(model$f$cgeneric$data$characters)))
   class(model) <- c("cgeneric", class(model))
   return(model)
 }
 
 
-#' @rdname cgeneric-class
+#' @describeIn cgeneric
+#' Build a `cgeneric` from a list of arguments.
 #' @export
 cgenericBuilder <- function(
     ...) {
@@ -243,8 +248,9 @@ cgenericBuilder <- function(
   }
   return(cmodel_wrapper)
 }
-#' @describeIn cgeneric-class
-#' A default mapper for a cgeneric/rgeneric model
+
+#' @describeIn cgeneric
+#'  A default mapper for a cgeneric/rgeneric model
 mapper1 <- function(model) {
   vs <- "2.13.0.9005"
   inlabruCheck <- packageCheck(
@@ -261,17 +267,16 @@ mapper1 <- function(model) {
   }
   return(mapper)
 }
-#' @rdname cgeneric-class
+
+#' @describeIn cgeneric
+#' Make the lib path for the shared lib of a package.
 #' @param package character giving the name of the package
 #' that contains the `cgeneric` model.
 #' @param useINLAprecomp logical, indicating if it is to use
 #' the shared object previously copied and compiled by INLA.
 #' @param debug integer, used as verbose in debug.
 #' @export
-#' @examples
-#' cgeneric_shlib(package = "INLAtools", useINLAprecomp = FALSE)
-#'
-cgeneric_shlib <- function(
+cgeneric_shlib_path <- function(
     package,
     useINLAprecomp,
     debug) {
@@ -316,10 +321,9 @@ cgeneric_shlib <- function(
   }
   return(normalizePath(shlib))
 }
-#' @describeIn cgeneric-class
+#' @describeIn cgeneric
 #' Print the cgeneric object
 #' @param x a cgeneric object
-#' @param ... not used
 #' @export
 print.cgeneric <- function(x, ...) {
   cat("cgeneric: ", x$f$cgeneric$model, ", n = ",
@@ -355,21 +359,20 @@ print.cgeneric <- function(x, ...) {
     }
   }
 }
-#' @describeIn cgeneric-class
+#' @describeIn cgeneric
 #' A summary for a cgeneric object
 #' @param object a cgeneric object
-#' @param ... not used
 #' @export
 summary.cgeneric <- function(object, ...) {
-  g <- graph(object)
+  g <- cgeneric_get(object, "graph")
   cat("n = ", object$f$cgeneric$n, ", graph with",
       length(g@x), "non-zeros\n", sep = "")
 }
-#' @describeIn cgeneric-class
+#' @describeIn cgeneric
 #' A plot for a cgeneric object
 #' @param y not used
 #' @export
 plot.cgeneric <- function(x, y, ...) {
-  g <- graph(x)
+  g <- cgeneric_get(x, "graph")
   image(g)
 }
