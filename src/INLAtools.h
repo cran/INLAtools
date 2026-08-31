@@ -1,7 +1,7 @@
 
 /* INLAtools.h
  *
- * Copyright (C) 2025 Elias T Krainski
+ * Copyright (C) 2025-2026 Elias T Krainski
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,50 +32,52 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#if defined(INLA_EXTERNAL_PACKAGE)
-#include <ltdl.h>
-#if defined(_OPENMP)
-#include <omp.h>
-#endif
-#else 
-#include <dlfcn.h>
-#include <R.h>
-#include <Rdefines.h>
-#include <Rinternals.h>
-#include <R_ext/Rdynload.h>	// needed to allow user interrupts
-#include <R_ext/Utils.h>	// needed to allow user interrupts
+#if defined(INLA_EXTERNAL_PACKAGES)
+#       include <ltdl.h>
+#       include <omp.h>
+#else
+#       include <dlfcn.h>
+#       include <R.h>
+#       include <Rdefines.h>
+#       include <Rinternals.h>
+#       include <R_ext/Rdynload.h>			       // needed to allow user interrupts
+#       include <R_ext/Utils.h>				       // needed to allow user interrupts
 #endif
 #include "cgeneric.h"
 
 #if !defined(Calloc)
-#define Calloc(n_, type_)  (type_ *)calloc((n_), sizeof(type_))
+#       define Calloc(n_, type_)  (type_ *)calloc((n_), sizeof(type_))
 #endif
 #define SQR(x) ((x)*(x))
 #define pow2(x) ((x)*(x))
 #define pow3(x) (pow2(x)*(x))
 #define pow4(x) (pow2(x)*pow2(x))
 
+#define Memcopy(dest, src, n, type) memcpy((void *) (dest), (void *) (src), (size_t) (n) * sizeof(type))
+#define Free(x) if (x) { free(x); x = NULL; }
+
 #if !defined(iszero)
-#ifdef __SUPPORT_SNAN__
-#define iszero(x) (fpclassify(x) == FP_ZERO)
-#else
-#define iszero(x) (((__typeof(x))(x)) == 0)
-#endif
+#       ifdef __SUPPORT_SNAN__
+#              define iszero(x) (fpclassify(x) == FP_ZERO)
+#       else
+#              define iszero(x) (((__typeof(x))(x)) == 0)
+#       endif
 #endif
 
 #if __GNUC__ > 7
-typedef size_t fortran_charlen_t;
+typedef size_t FORTRAN_CHARLEN_T;
 #else
-typedef int fortran_charlen_t;
+typedef int FORTRAN_CHARLEN_T;
 #endif
 
-#define F_ONE ((fortran_charlen_t)1)
+#define F_ONE ((FORTRAN_CHARLEN_T)1)
 
-#if defined(INLA_EXTERNAL_PACKAGE)
+#if defined(INLA_EXTERNAL_PACKAGES)
 inla_cgeneric_func_tp inla_cgeneric_generic0;
 inla_cgeneric_func_tp inla_cgeneric_kronecker;
-#else 
-SEXP inla_cgeneric_element_get(SEXP Rcmd, SEXP Stheta, SEXP Sntheta, SEXP ints,
-			       SEXP doubles, SEXP chars, SEXP mats, SEXP smats);
+inla_cgeneric_func_tp *inla_cgeneric_mapper(char *name);
+#else
+inla_cgeneric_func_tp inla_cgeneric_generic0;
+inla_cgeneric_func_tp inla_cgeneric_kronecker;
+SEXP inla_cgeneric_element_get(SEXP Rcmd, SEXP Stheta, SEXP Sntheta, SEXP ints, SEXP doubles, SEXP chars, SEXP mats, SEXP smats);
 #endif
-
